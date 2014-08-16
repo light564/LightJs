@@ -1,4 +1,9 @@
 window.light = {
+
+	// new后的Model push到后面，统一调度
+	modelStack : [],
+	// new后的clock
+	clockStack : [],
 				
 	isObject : function(obj){
 		return obj === Object(obj);
@@ -167,19 +172,21 @@ window.light = {
 			[1.25,1.45,1.65,1.65,1.65,1.45,1.25],
 			[1.25,1.45,1.45,1.45,1.45,1.45,1.25],
 			[1.25,1.25,1.25,1.25,1.25,1.25,1.25],
-		],
+		];
 		self.touchWaterArray = [
 			[0.15,0.15,0.15],
 			[0.15,0.25,0.15],
 			[0.15,0.15,0.15],
-		],
+		];
 		self.rainWaterArray = [
 			[0.15,0.15,0.15,0.15,0.15],
 			[0.15,0.25,0.25,0.25,0.15],
 			[0.15,0.25,0.55,0.25,0.15],
 			[0.15,0.25,0.25,0.25,0.15],
 			[0.15,0.15,0.15,0.15,0.15],
-		]
+		];
+
+		light.modelStack.push(self);
 
 		return self;
 	},
@@ -192,7 +199,30 @@ window.light = {
 		if (!(this instanceof light.snowModel)){//强制使用new
 			return new light.snowModel(conf);
 		}
-	}
+	},
+
+	/*
+	 * note 运行model和clock
+	 */
+
+	run : function(){
+		var self = this,
+		modelLength = self.modelStack.length,
+		clockLength = null;
+
+		for(var i = 0; i < modelLength; i++){
+			self.modelStack[i].run();
+		}
+
+		self.clockStack = self.destoryIterm(self.clockStack);
+		clockLength = self.clockStack.length;
+		
+		for(var i = 0; i < clockLength; i++){
+			self.clockStack[i].run();
+		}
+
+		requestAnimFrame(self.runModel);
+	},
 
 	/*
 	 * note 计时器
@@ -204,10 +234,14 @@ window.light = {
 		}
 		conf = conf === undefined ? {} : conf;
 
-		this.gap = conf.gap || 1000;//计时器间隔时间 单位ms
-		this.loop = conf.loop || -1//-1为无限次循环   循环次数
-		this.destory = conf.destory || false;//次数用尽后自毁
-		this.start = new Date().getTime();//计时器开始时间 ms
+		var self = this;
+
+		self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
+		self.loop = conf.loop || -1//-1为无限次循环   循环次数
+		self.destory = conf.destory || false;//次数用尽后自毁
+		self.start = new Date().getTime();//计时器开始时间 ms
+
+		light.clockStack.push(self);
 	},
 }
 
