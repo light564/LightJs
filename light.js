@@ -216,12 +216,12 @@ window.light = {
 
 		self.clockStack = self.destoryIterm(self.clockStack);
 		clockLength = self.clockStack.length;
-		
+
 		for(var i = 0; i < clockLength; i++){
 			self.clockStack[i].run();
 		}
 
-		requestAnimFrame(self.runModel);
+		requestAnimFrame(self.run);
 	},
 
 	/*
