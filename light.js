@@ -206,7 +206,7 @@ window.light = {
 	 */
 
 	run : function(){
-		var self = this,
+		var self = light,
 		modelLength = self.modelStack.length,
 		clockLength = null;
 
