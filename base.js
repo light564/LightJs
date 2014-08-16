@@ -203,27 +203,3 @@ NodeList.prototype.forEach = function(fn){
 	}
 	return this;
 }
-
-/*获取鼠标位置*/
-function mousePosition(ev){ 
-	if(ev.pageX || ev.pageY){ 
-		return {x:ev.pageX, y:ev.pageY}; 
-	} 
-	return {
-		x:ev.clientX + document.body.scrollLeft - document.body.clientLeft, 
-		y:ev.clientY + document.body.scrollTop - document.body.clientTop 
-	}; 
-}
-
-
-//canvas
-window.requestAnimFrame = (function() {
-                return window.requestAnimationFrame ||
-                window.webkitRequestAnimationFrame ||
-                window.mozRequestAnimationFrame ||
-                window.oRequestAnimationFrame ||
-                window.msRequestAnimationFrame ||
-                function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
-                    window.setTimeout(callback, 1000/60);
-                };
-            })();

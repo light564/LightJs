@@ -12,6 +12,20 @@ window.light = {
 		return Object.prototype.toString.call(obj) == '[object String]';
 	},
 
+	isEmail: function(email){
+		if (email.match('@') === null) {
+			return false;
+		}
+		return true;
+	},
+
+	isMobilePhone: function(phone){
+		if (phone.match(/(?:\(?[0\+]?\d{1,3}\)?)[\s-]?(?:0|\d{1,4})[\s-]?(?:(?:13\d{9})|(?:\d{7,8}))/) === null) {
+			return false;
+		}
+		return true;
+	},
+
 	//遍历整个对象 找到属性值
 	getObjectValue : function(obj, key){
 		var self = this,
@@ -160,13 +174,25 @@ window.light = {
 			[0.15,0.15,0.15],
 		],
 		self.rainWaterArray = [
-			[0.35,0.35,0.35],
-			[0.35,0.55,0.35],
-			[0.35,0.35,0.35],
+			[0.15,0.15,0.15,0.15,0.15],
+			[0.15,0.25,0.25,0.25,0.15],
+			[0.15,0.25,0.55,0.25,0.15],
+			[0.15,0.25,0.25,0.25,0.15],
+			[0.15,0.15,0.15,0.15,0.15],
 		]
 
 		return self;
 	},
+
+	/*
+	 * note 下雪
+	 * conf 见注释， context2D必选
+	 */
+	snowModel : function(conf){
+		if (!(this instanceof light.snowModel)){//强制使用new
+			return new light.snowModel(conf);
+		}
+	}
 
 	/*
 	 * note 计时器
@@ -310,6 +336,12 @@ light.waterModel.prototype.drawWaterPool = function(){
 
 }
 
+//
+light.waterModel.prototype.run = function(){
+	this.amplitude();
+	this.drawWaterPool();
+}
+
 /*
  * note 触碰水面
  * touch point点击, touch 滑动, rain 下雨
@@ -335,7 +367,18 @@ light.waterModel.prototype.touchWater = function(x,y,touch){
 light.waterModel.prototype.rain = function(){
 	var self = this,
 	x = Math.round(Math.random()*self.width),
-	y = Math.round(Math.random()*30+10);
+	y = Math.round(Math.random()*30+10),
+	x2 = Math.round(Math.random()*self.width),
+	y2 = Math.round(Math.random()*30+10),
+	swich = Math.random();
+
+	if (swich < 0.3) {
+		return;
+	}
+
+	if (swich > 0.7) {
+		self.touchWater(x2,y2,'rainWaterArray');
+	}
 
 	self.touchWater(x,y,'rainWaterArray');
 }
@@ -344,7 +387,7 @@ light.clock.prototype.doSometing = function(){
 	//等待用户自定义
 }
 
-light.clock.prototype.Run = function(){
+light.clock.prototype.run = function(){
 	if(this.loop === 0){
 		this.destory = true;
 		return;
@@ -357,3 +400,27 @@ light.clock.prototype.Run = function(){
 		this.loop--;
 	}
 }
+
+/*获取鼠标位置*/
+function mousePosition(ev){ 
+	if(ev.pageX || ev.pageY){ 
+		return {x:ev.pageX, y:ev.pageY}; 
+	} 
+	return {
+		x:ev.clientX + document.body.scrollLeft - document.body.clientLeft, 
+		y:ev.clientY + document.body.scrollTop - document.body.clientTop 
+	}; 
+}
+
+
+//canvas
+window.requestAnimFrame = (function() {
+                return window.requestAnimationFrame ||
+                window.webkitRequestAnimationFrame ||
+                window.mozRequestAnimationFrame ||
+                window.oRequestAnimationFrame ||
+                window.msRequestAnimationFrame ||
+                function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+                    window.setTimeout(callback, 1000/60);
+                };
+            })();
