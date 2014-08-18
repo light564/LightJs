@@ -206,7 +206,7 @@ window.light = {
 	 */
 
 	run : function(){
-		var self = light,
+		var self = this,
 		modelLength = self.modelStack.length,
 		clockLength = null;
 
@@ -221,7 +221,7 @@ window.light = {
 			self.clockStack[i].run();
 		}
 
-		requestAnimFrame(self.run);
+		requestAnimFrame.call(self, self.run);
 	},
 
 	/*
