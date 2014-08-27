@@ -417,7 +417,7 @@ light.waterModel.prototype.rain = function(){
 	self.touchWater(x,y,'rainWaterArray');
 }
 
-light.clock.prototype.doSometing = function(){
+light.clock.prototype.doSomething = function(){
 	//等待用户自定义
 }
 
@@ -429,7 +429,7 @@ light.clock.prototype.run = function(){
 
 	var now = new Date().getTime();
 	if(now - this.start >= this.gap){
-		this.doSometing();
+		this.doSomething();
 		this.start = now;
 		this.loop--;
 	}
