@@ -58,17 +58,20 @@ $.ajax = function(setting){
 //DOM拓展
 
 HTMLElement.prototype.removeSelf = function(){
-	if (this.removeNode !== undefined) {
-		this.removeNode(true);
+	var self = this;
+
+	if (self.removeNode !== undefined) {
+		self.removeNode(true);
 	} else{
-		this.remove();
+		self.remove();
 	}
 
-	return this;
+	return self;
 }
 
 HTMLElement.prototype.find = function(element){
-	var temp = this.querySelectorAll(element);
+	var self = this,
+	temp = self.querySelectorAll(element);
 	if (temp.length === 1 || temp.length === 0) {//undefined
 		return temp[0];
 	}
@@ -77,89 +80,97 @@ HTMLElement.prototype.find = function(element){
 }
 
 HTMLElement.prototype.getStyle = function(css, pseudoElt){
+	var self = this;
 	if(pseudoElt === undefined)
-		return window.getComputedStyle(this)[css]
-	return window.getComputedStyle(this, pseudoElt)[css]
+		return window.getComputedStyle(self)[css]
+	return window.getComputedStyle(self, pseudoElt)[css]
 }
 
 HTMLElement.prototype.removeClass = function(className){
-	var classList = this.className.split(' '),
+	var self = this,
+	classList = self.className.split(' '),
 	listNum = -1;
 	if ( (listNum = classList.indexOf(className)) !== -1 ) {
 		classList.splice(listNum, 1);
 	}
-	this.className = classList.join(' ');
-	return this;
+	self.className = classList.join(' ');
+	return self;
 }
 
 HTMLElement.prototype.addClass = function(className){
-	var classList = this.className.split(' ');
+	var self = this,
+	classList = self.className.split(' ');
 	if (classList.indexOf(className) === -1) {
 		
 		if (classList.length !== 0) {
-			this.className += ' ' + className;	
+			self.className += ' ' + className;	
 		} else{
-			this.className = className;
+			self.className = className;
 		}
 		
 	}
-	return this;
+	return self;
 }
 
 HTMLElement.prototype.bindTransEnd = function(fn){
+	var self = this,
+	fnThis = fn.bind(self);
 	/*if (fn === undefined) {
 		return
 	}*/
-	this.addEventListener('transitionend', fn, true);
-	this.addEventListener('webkitTransitionEnd', fn, true);
-	this.addEventListener('mozTransitionEnd', fn, true);
-	this.addEventListener('oTransitionEnd', fn, true);
-	this.TransitionEnd = fn;
-	return this;
+	self.addEventListener('transitionend', fnThis, true);
+	self.addEventListener('webkitTransitionEnd', fnThis, true);
+	self.addEventListener('mozTransitionEnd', fnThis, true);
+	self.addEventListener('oTransitionEnd', fnThis, true);
+	self.TransitionEnd = fnThis;
+	return self;
 }
 
 HTMLElement.prototype.unbindTransEnd = function(){
-	var fn = this.TransitionEnd;
+	var self = this,
+	fn = self.TransitionEnd;
 	if(fn === undefined)
 		return;
-	this.removeEventListener('transitionend', fn, true);
-	this.removeEventListener('webkitTransitionEnd', fn, true);
-	this.removeEventListener('mozTransitionEnd', fn, true);
-	this.removeEventListener('oTransitionEnd', fn, true);
-	this.TransitionEnd = undefined;
-	return this;
+	self.removeEventListener('transitionend', fn, true);
+	self.removeEventListener('webkitTransitionEnd', fn, true);
+	self.removeEventListener('mozTransitionEnd', fn, true);
+	self.removeEventListener('oTransitionEnd', fn, true);
+	self.TransitionEnd = undefined;
+	return self;
 }
 
 HTMLElement.prototype.fadeOut = function(fn){
+	var self = this;
 	//需要增加css3过渡属性
-	if(this.getStyle('opacity') !== 0.0){
-		this.style.opacity = "0.0";
-		this.unbindTransEnd();
-		this.bindTransEnd(function(){
-			this.unbindTransEnd();
-			this.style.visibility = "hidden";
+	if(self.getStyle('opacity') !== 0.0){
+		self.style.opacity = "0.0";
+		self.unbindTransEnd();
+		self.bindTransEnd(function(){
+			self.unbindTransEnd();
+			self.style.visibility = "hidden";
 			if (fn !== undefined) {
 				fn()
 			}
 		});
 	}
-	return this;
+	return self;
 }
 
 HTMLElement.prototype.fadeIn = function(fn){
+	var self = this;
 	//需要增加css3过渡属性
-	if(this.getStyle("opacity") !== 1.0){
-		this.style.visibility = "visible";
-		this.style.opacity = "1.0";
-		this.unbindTransEnd();
-		this.bindTransEnd(function(){
-			this.unbindTransEnd();
+	if(self.getStyle("opacity") !== 1.0){
+		self.style.visibility = "visible";
+		self.style.opacity = "1.0";
+		self.unbindTransEnd();
+		self.bindTransEnd(function(){
+			self.unbindTransEnd();
 			if (fn !== undefined) {
 				fn()
 			}
 		});
 	}
-	return this;
+	return self;
 }
 
 HTMLElement.prototype.getOffset = function(){
@@ -182,24 +193,26 @@ HTMLElement.prototype.getOffset = function(){
  *
  */
 HTMLElement.prototype.attr = function(){
+	var self = this;
 	if (arguments.length === 1) {
-		var attrValue = this.getAttribute(arguments[0]);//不存在则为null
+		var attrValue = self.getAttribute(arguments[0]);//不存在则为null
 		if (attrValue === null) {
 			return '';	
 		}
 		return attrValue;
 	} else if (arguments[1] !== null) {
-		this.setAttribute(arguments[0], arguments[1]);
-		return this;
+		self.setAttribute(arguments[0], arguments[1]);
+		return self;
 	} else if (arguments[1] === null) {
-		this.removeAttribute(arguments[0]);
+		self.removeAttribute(arguments[0]);
 	}
 }
 
 NodeList.prototype.forEach = function(fn){
-	var length = this.length;
+	var self = this,
+	length = self.length;
 	for(var i = 0; i < length; i++){
-		fn.call(this[i],this[i],i);
+		fn.call(self[i],self[i],i);
 	}
-	return this;
+	return self;
 }
