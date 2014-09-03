@@ -372,8 +372,10 @@ light.waterModel.prototype.drawWaterPool = function(){
 
 //
 light.waterModel.prototype.run = function(){
-	this.amplitude();
-	this.drawWaterPool();
+	var self = this;
+	
+	self.amplitude();
+	self.drawWaterPool();
 }
 
 /*
@@ -422,16 +424,17 @@ light.clock.prototype.doSomething = function(){
 }
 
 light.clock.prototype.run = function(){
-	if(this.loop === 0){
-		this.destory = true;
+	var self = this;
+	if(self.loop === 0){
+		self.destory = true;
 		return;
 	}
 
 	var now = new Date().getTime();
-	if(now - this.start >= this.gap){
-		this.doSomething();
-		this.start = now;
-		this.loop--;
+	if(now - self.start >= self.gap){
+		self.loop--;
+		self.start = now;
+		self.doSomething();
 	}
 }
 
