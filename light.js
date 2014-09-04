@@ -183,11 +183,11 @@ window.light = {
 			'B' : 1,
 			'C' : c
 		}
-	}
+	},
 
 	lineFunctionResult : function(l,p){
 		return l.A*p.x + l.B*p.y + l.C
-	}
+	},
 
 	getLinePoint : function(l1, l2){
 		if (l1.A === l2.A && l1.B === l2.B) {
@@ -201,7 +201,7 @@ window.light = {
 			'x': x,
 			'y': y
 		}
-	}
+	},
 
 	/*
 	 * note 	判断点是否在矩形区域中
@@ -226,7 +226,7 @@ window.light = {
 		}
 
 		return false;
-	}
+	},
 
 	//--------------------------------------------//
 	//					canvas操作区域			  //
@@ -257,7 +257,7 @@ window.light = {
 			'b' : b,
 			'a' : a
 		}
-	}
+	},
 
 	setPixel : function(imageData, x, y, color){
 		var r = color.r,
@@ -275,7 +275,7 @@ window.light = {
 		d[i + 3] = a;
 
 		return;
-	}
+	},
 
 	//--------------------------------------------//
 	//					dom节点操作区域			  //
