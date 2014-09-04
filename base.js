@@ -112,17 +112,55 @@ HTMLElement.prototype.addClass = function(className){
 	return self;
 }
 
-HTMLElement.prototype.bindTransEnd = function(fn){
-	var self = this,
+HTMLElement.prototype.bindCssEvent = function(key, fn){
+	var self = this,//TransitionEnd
 	fnThis = fn.bind(self);
 	/*if (fn === undefined) {
 		return
 	}*/
-	self.addEventListener('transitionend', fnThis, true);
-	self.addEventListener('webkitTransitionEnd', fnThis, true);
-	self.addEventListener('mozTransitionEnd', fnThis, true);
-	self.addEventListener('oTransitionEnd', fnThis, true);
-	self.TransitionEnd = fnThis;
+	self.addEventListener(key, fnThis, true);
+
+	key = key[0].toUpperCase() + key.slice(1);
+
+	self.addEventListener('webkit' + key, fnThis, true);
+	self.addEventListener('moz' + key, fnThis, true);
+	self.addEventListener('o' + key, fnThis, true);
+	self[key] = fnThis;
+	return self;
+}
+
+HTMLElement.prototype.unbindCssEvent = function(key){
+	var self = this,
+	fn = self[key];
+	if(fn === undefined)
+		return;
+	self.removeEventListener(key, fn, true);
+
+	key = key[0].toUpperCase() + key.slice(1);
+
+	self.removeEventListener('webkit' + key, fn, true);
+	self.removeEventListener('moz' + key, fn, true);
+	self.removeEventListener('o' + key, fn, true);
+	self[key] = undefined;
+	return self;
+}
+
+HTMLElement.prototype.cssProperty = function(key, value){
+	var self = this;
+
+	self.style[key] = value;
+	key = key[0].toUpperCase() + key.slice(1);
+	self.style['o' + key] = value;
+	self.style['ms' + key] = value;
+	self.style['moz' + key] = value;
+	self.style['webkit' + key] = value;
+
+	return self;
+}
+
+HTMLElement.prototype.bindTransEnd = function(fn){
+	var self = this;
+	self.bindCssEvent('transitionend', fn);
 	return self;
 }
 
@@ -131,11 +169,7 @@ HTMLElement.prototype.unbindTransEnd = function(){
 	fn = self.TransitionEnd;
 	if(fn === undefined)
 		return;
-	self.removeEventListener('transitionend', fn, true);
-	self.removeEventListener('webkitTransitionEnd', fn, true);
-	self.removeEventListener('mozTransitionEnd', fn, true);
-	self.removeEventListener('oTransitionEnd', fn, true);
-	self.TransitionEnd = undefined;
+	self.unbindCssEvent('transitionend', fn);
 	return self;
 }
 

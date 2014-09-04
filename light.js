@@ -117,15 +117,144 @@ window.light = {
 
 		return templateNode;
 	},
+	/********************************************************************************************************/
+	//											动画区域
+	//
+	/********************************************************************************************************/
 
-	destoryIterm : function(stackList){
-		//生成了新的数组  与原来的地址不一样～
-		stackList = stackList.filter(function(element){
-			return !element.destory;//返回destory为false的元素
-		});
-
-		return stackList
+	//--------------------------------------------//
+	//					数学区域				  //
+	//--------------------------------------------//
+	/*
+	 * note 	获取向量与x+方向的夹角
+	 * author 	Light
+	 * parameter p 点
+	 */
+	getAngle : function(p){
+		var angle = null;
+		if (p.x === 0) {
+			if (p.y >= 0) {
+				return 180/2;
+			} else{
+				return 180*3/2;
+			}
+		}
+		// 1象限
+		angle = Math.atan(p.y/p.x) / Math.PI * 180;
+		// 2象限
+		if (p.x < 0 && p.y > 0) {
+			angle = angle + 180;
+		}
+		// 3象限
+		if (p.x < 0 && p.y < 0) {
+			angle = angle + 180;
+		}
+		// 4象限
+		if (p.y < 0 && p.x > 0) {
+			angle = angle + 2 * 180;
+		}
+		return angle;
 	},
+
+	//--------------------------------------------//
+	//					dom节点操作区域			  //
+	//--------------------------------------------//
+
+	/*
+	 * note 鼠标拖动旋转
+	 * author Light
+	 */
+
+	setTurntable : function(element){
+		var self = this,
+		mousePosOld = {
+			'x' : 0,
+			'y' : 0,
+			'angle' : 0
+		},
+		angleSum = +element.attr('style').match(/rotate\((\d+)deg\)/)[1],
+		offset = element.getOffset(),
+		centerPoint = {
+			'x' : parseInt(offset.left + element.clientWidth / 2),
+			'y' : parseInt(offset.top + element.clientHeight / 2)
+		},
+		key = false;
+
+		if (window.isNaN(mousePosOld.angleSum)) {
+			mousePosOld.angleSum = 0;
+		}
+
+		var mouseDown = function(ev){
+			ev = ev || window.event; 
+			if(ev.button == 2 || ev.button == 3){
+				return;
+			}
+			var mousePos = mousePosition(ev);
+
+			key = true;
+			mousePosOld.x = parseInt(mousePos.x - centerPoint.x);
+			mousePosOld.y = parseInt(mousePos.y - centerPoint.y);
+			mousePosOld.angle = parseInt(self.getAngle(mousePosOld));
+		},
+		mouseMove = function(ev){
+			ev = ev || window.event; 
+			if(ev.button == 2 || ev.button == 3 || key === false){
+				return;
+			}
+			var mousePos = mousePosition(ev),
+			gap = 0;
+			mousePos.x = parseInt(mousePos.x - centerPoint.x);
+			mousePos.y = parseInt(mousePos.y - centerPoint.y);
+			mousePos.angle = parseInt(self.getAngle(mousePos));
+			gap = mousePos.angle - mousePosOld.angle;
+			if (Math.abs(gap) < 100) {
+				angleSum += mousePos.angle - mousePosOld.angle;
+			} else if (gap > 0) {
+				angleSum += mousePos.angle - mousePosOld.angle - 360;
+			} else {
+				angleSum += mousePos.angle - mousePosOld.angle + 360;
+			}
+			
+			mousePosOld = mousePos;
+			element.cssProperty('transform','rotate('+angleSum+'deg)');
+		},
+		mouseUp = function(ev){
+			ev = ev || window.event;
+			if(ev.button == 2 || ev.button == 3){
+				return;
+			}
+			key = false;
+			return;
+		};
+
+		element.addEventListener('mousedown', mouseDown, false);
+		element.addEventListener('mousemove', mouseMove, false);
+		document.addEventListener('mouseup', mouseUp, false);
+	},
+
+	//--------------------------------------------//
+	//					模型区域			      //
+	//--------------------------------------------//
+	/*
+	 * note 计时器
+	 * conf: 见注释
+	 */
+	clock : function(conf){
+		if (!(this instanceof light.clock)){//强制使用new
+			return new light.clock(conf);
+		}
+		conf = conf === undefined ? {} : conf;
+
+		var self = this;
+
+		self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
+		self.loop = conf.loop || -1//-1为无限次循环   循环次数
+		self.destory = conf.destory || false;//次数用尽后自毁
+		self.start = new Date().getTime();//计时器开始时间 ms
+
+		light.clockStack.push(self);
+	},
+
 
 	/*
 	 * note 水纹效果
@@ -201,6 +330,19 @@ window.light = {
 		}
 	},
 
+	//--------------------------------------------//
+	//					控制区域			      //
+	//--------------------------------------------//
+
+	destoryIterm : function(stackList){
+		//生成了新的数组  与原来的地址不一样～
+		stackList = stackList.filter(function(element){
+			return !element.destory;//返回destory为false的元素
+		});
+
+		return stackList
+	},
+
 	/*
 	 * note 运行model和clock
 	 */
@@ -222,27 +364,9 @@ window.light = {
 		}
 
 		requestAnimFrame(self.run);
-	},
+	}
 
-	/*
-	 * note 计时器
-	 * conf: 见注释
-	 */
-	clock : function(conf){
-		if (!(this instanceof light.clock)){//强制使用new
-			return new light.clock(conf);
-		}
-		conf = conf === undefined ? {} : conf;
-
-		var self = this;
-
-		self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
-		self.loop = conf.loop || -1//-1为无限次循环   循环次数
-		self.destory = conf.destory || false;//次数用尽后自毁
-		self.start = new Date().getTime();//计时器开始时间 ms
-
-		light.clockStack.push(self);
-	},
+	
 }
 
 //振幅计算   水纹扩散
