@@ -156,6 +156,127 @@ window.light = {
 		return angle;
 	},
 
+	/*
+	 * note 获取直线方程
+	 * 传入参数，2个点{x:10,y:10};    
+	 * return Ax+By+C=0  A2,B2  边长比例
+	 */
+
+	getLineFunction : function(p1, p2){
+		var k = (p1.y - p2.y) / (p2.x - p1.x),
+		c = -k * p1.x - p1.y;
+
+		if (p2.x === p1.x && p1.y === p2.y) {
+			return null;
+		}
+
+		if (k === Infinity || k === -Infinity) {
+			return {
+				'A' : 1,
+				'B' : 0,
+				'C' : -p1.x
+			};
+		}
+
+		return {
+			'A' : k,
+			'B' : 1,
+			'C' : c
+		}
+	}
+
+	lineFunctionResult : function(l,p){
+		return l.A*p.x + l.B*p.y + l.C
+	}
+
+	getLinePoint : function(l1, l2){
+		if (l1.A === l2.A && l1.B === l2.B) {
+			return null;
+		}
+
+		var y = (l1.A*l2.C - l2.A*l1.C)/(l2.A*l1.B - l1.A*l2.B),
+		x = -(l1.B*y + l1.C)/l1.A;
+
+		return {
+			'x': x,
+			'y': y
+		}
+	}
+
+	/*
+	 * note 	判断点是否在矩形区域中
+	 * rectangle={p1,p2,p3,p4} 顺时针，左上角第一个; l{l1,l2,l3,l4}
+	 */
+	inRectangle : function(rect, p, l){
+		var self = this,
+		l = l || {l1:undefined,l2:undefined,l3:undefined,l4:undefined}
+		l1 = l.l1 || self.getLineFunction(rect.p1, rect.p2),
+		l2 = l.l2 || self.getLineFunction(rect.p2, rect.p3),
+		l3 = l.l3 || self.getLineFunction(rect.p3, rect.p4),
+		l4 = l.l4 || self.getLineFunction(rect.p4, rect.p1);
+
+		var r1 = self.lineFunctionResult(l1,p),
+		r2 = self.lineFunctionResult(l2,p),
+		r3 = self.lineFunctionResult(l3,p),
+		r4 = self.lineFunctionResult(l4,p);
+
+		// 忽略可能出现的计算误差
+		if (r1 * r3 <= 0 && r2 * r4 <= 0) {
+			return true;
+		}
+
+		return false;
+	}
+
+	//--------------------------------------------//
+	//					canvas操作区域			  //
+	//--------------------------------------------//
+	/*
+	 * note 	获取imageData 中 像素点的值
+	 * author	Light
+	 */
+
+	getPixel : function(imageData, x, y){
+		var r = 0,
+		g = 0,
+		b = 0,
+		a = 0,
+		d = imageData.data,
+		w = imageData.width,
+		h = imageData.height,
+		i = 4*(w*parseInt(y)+parseInt(x));
+
+		r = d[i];
+		g = d[i + 1];
+		b = d[i + 2];
+		a = d[i + 3];
+
+		return {
+			'r' : r,
+			'g' : g,
+			'b' : b,
+			'a' : a
+		}
+	}
+
+	setPixel : function(imageData, x, y, color){
+		var r = color.r,
+		g = color.g,
+		b = color.b,
+		a = color.a,
+		d = imageData.data,
+		w = imageData.width,
+		h = imageData.height,
+		i = 4*(w*parseInt(y)+parseInt(x));
+
+		d[i] = r;
+		d[i + 1] = g;
+		d[i + 2] = b;
+		d[i + 3] = a;
+
+		return;
+	}
+
 	//--------------------------------------------//
 	//					dom节点操作区域			  //
 	//--------------------------------------------//
@@ -328,6 +449,33 @@ window.light = {
 		if (!(this instanceof light.snowModel)){//强制使用new
 			return new light.snowModel(conf);
 		}
+
+		var self = this;
+		self.width = conf.width || 500,
+		self.height = conf.height || 400,
+		self.bgColor = conf.bgColor || '#6B92B9',
+		self.context2D = conf.context2D,
+		self.flakeNum = conf.flakeNum || 50,			// 雪花数目
+		self.flakeArr = [],								// 雪花数组，各种属性
+		self.r = conf.r || 2,							// 半径最大值-1
+		self.opacityMax = conf.opacityMax || 0.9, 		// 透明度范围最大值
+		self.opacityMin = conf.opacityMin || 0.3,		// 透明度范围最小值
+		self.angle = 0.0,								// 三角函数控制移动
+		self.vk = conf.vk || 0.5,
+		self.windPower = conf.windPower || 1.0,
+		self.windDamp = conf.windDamp || 0.96, 			// 吹后阻尼
+		self.snowsCoverCanvas = conf.snowsCoverCanvas || null
+		self.snowsCoverData = conf.snowsCoverData || null,	// 积雪覆盖
+		self.other = null;
+
+		if (!self.snowsCoverData) {
+			self.snowsCoverData = self.snowsCoverCanvas.getImageData(0, 0, self.width, self.height);
+		}
+
+		light.modelStack.push(self);
+
+		self.initFlakeArr();
+		self.draw();
 	},
 
 	//--------------------------------------------//
@@ -369,6 +517,9 @@ window.light = {
 	
 }
 
+//--------------------------------------------//
+//					水纹  			      	  //
+//--------------------------------------------//
 //振幅计算   水纹扩散
 light.waterModel.prototype.amplitude = function(){
 
@@ -542,6 +693,195 @@ light.waterModel.prototype.rain = function(){
 
 	self.touchWater(x,y,'rainWaterArray');
 }
+
+//--------------------------------------------//
+//					雪花  			      	  //
+//--------------------------------------------//
+// 初始化雪花数组
+light.snowModel.prototype.initFlakeArr = function(){
+	var self = this;
+	for(var i = 0; i < self.flakeNum; i++){
+		self.flakeArr.push(self.initFlake());
+	}
+}
+// 初始化雪花
+light.snowModel.prototype.initFlake = function(sf){
+	var self = this;
+
+	return {
+		x: Math.random()*self.width,
+		y: Math.random()*self.height,
+		r: Math.random()*self.r + 1,
+		color: 'rgba(255, 255, 255, '+(Math.random()*(self.opacityMax - self.opacityMin) + self.opacityMin)+')',
+		density: Math.random()*self.flakeNum,
+		windX : 0,
+		windY : 0,
+		angle : sf && sf.angle || Math.random()*Math.PI*2
+	}
+}
+
+light.snowModel.prototype.draw = function(){
+	var self = this;
+
+	self.context2D.clearRect(0, 0, self.width, self.height);
+	self.context2D.fillStyle = self.bgColor;
+	self.context2D.fillRect(0, 0, self.width, self.height);
+
+	for(var i = 0; i < self.flakeNum; i++){
+		var sf = self.flakeArr[i];
+		self.context2D.beginPath();
+		self.context2D.fillStyle = sf.color;
+		self.context2D.moveTo(sf.x, sf.y);
+		self.context2D.arc(sf.x, sf.y, sf.r, 0, Math.PI*2, true);
+		self.context2D.fill();
+	}
+	self.context2D.fillStyle = '#000';
+	self.context2D.fillRect(wid/2 - 100,hig/2 - 60,200,5);
+}
+// 雪花飘落
+light.snowModel.prototype.snowDown = function(){
+	var self = this,
+	windArea = [];
+
+	//
+	for(var i = 0; i < self.windArea.length; i++){
+		if (self.windArea[i].windNum <= 0) {
+			self.windArea.splice(i,0);
+		}else{
+			self.windArea[i].windNum --;
+			windArea.push(self.windArea[i]);
+		}						
+	}
+
+	for(var i = 0; i < self.flakeNum; i++){
+		var sf = self.flakeArr[i];
+
+		self.windEffect(windArea, sf);
+
+		sf.angle += 0.01;
+		sf.y += 0.8*(Math.cos(sf.angle + sf.density) + 1 + sf.r/2)*self.vk + sf.windY;
+		sf.x += 0.3*Math.cos(sf.angle)*2*self.vk + sf.windX;
+
+		self.snowsCover(sf);
+
+		if (sf.windX > 0.01) {
+			//sf.windX -= 0.01;
+			sf.windX *= self.windDamp;
+		} else if(sf.windX < -0.01){
+			//sf.windX += 0.01;
+			sf.windX *= self.windDamp;
+		} else{
+			sf.windX = 0;
+		}
+
+		if (sf.windY > 0.01) {
+			//sf.windY -= 0.01;
+			sf.windY *= self.windDamp;
+		} else if(sf.windY < -0.01){
+			//sf.windY += 0.01;
+			sf.windY *= self.windDamp;
+		} else{
+			sf.windY = 0;
+		}
+
+		if (sf.y > self.height + 2*self.r || sf.x > self.width + 2*self.r || sf.x < - 2*self.r) {
+			if (i % 5 > 0) {
+				sf = self.flakeArr[i] = self.initFlake(sf);
+				sf.y = -2*self.r - 2;
+			} else{
+				if ( (sf.angle + sf.density) % (2*Math.PI) < Math.PI) {
+					sf = self.flakeArr[i] = self.initFlake(sf);
+					sf.x = -2*self.r;
+				} else{
+					sf = self.flakeArr[i] = self.initFlake(sf);
+					sf.x = self.width + 2*self.r;
+				}
+			}
+		}
+	}
+}
+
+/*
+ * note 风区域
+ * l1, l2, l3, l4 4条线方程
+ * dir方向  {x:-1,y:1}
+ */
+light.snowModel.prototype.windArea = [];
+
+light.snowModel.prototype.addWind = function(p1, p2, p3, p4){
+	var self = this,
+	l1 = p1.A ? p1 : light.getLineFunction(p1,p2),
+	l2 = p2.A ? p2 : light.getLineFunction(p2,p3),
+	l3 = p3.A ? p3 : light.getLineFunction(p3,p4),
+	l4 = p4.A ? p4 : light.getLineFunction(p4,p1),
+	dir = {},
+	pp1 = light.getLinePoint(l1, l4),
+	pp2 = light.getLinePoint(l1, l2);
+
+	if (pp1 === null) {
+		console.log(l1, l4, p1, p2, p4);
+	}
+	// 逆向
+	if ( pp1.x < pp2.x ) {
+		dir.x = 1;
+	} else{
+		dir.x = -1;
+	}
+
+	if ( pp1.y < pp2.y ) {
+		dir.y = 1;
+	} else{
+		dir.y = -1;
+	}
+
+	self.windArea.push({
+		'l1' : l1,
+		'l2' : l2,
+		'l3' : l3,
+		'l4' : l4,
+		'dir' : dir,
+		'A2': Math.abs(l1.A)/Math.sqrt(1+l1.A*l1.A),
+		'B2': 1/Math.sqrt(1+l1.A*l1.A),
+		'windNum' : 5
+	});
+}
+
+light.snowModel.prototype.windEffect = function(windArea, p){
+	var self = this,
+	length = windArea.length,
+	sum = 0;
+
+	for(var i = 0; i < length; i++){
+		if (light.inRectangle(undefined, p, windArea[i])) {
+			p.windX += self.windPower * windArea[i].B2 * windArea[i].dir.x / p.r;
+			p.windY += self.windPower * windArea[i].A2 * windArea[i].dir.y / p.r;
+		}
+	}
+}
+
+light.snowModel.prototype.run = function(){
+	var self = this;
+
+	self.snowDown();
+	self.draw();
+}
+
+light.snowModel.prototype.snowsCover = function(sf){
+	var self = this;
+
+	if (self.snowsCoverData === null) {
+		return;
+	}
+
+	var px = light.getPixel(self.snowsCoverData, sf.x, sf.y + sf.r);
+	if (px.r === 0 && px.g === 0 && px.b === 0) {
+		sf.y = self.height+200;
+	}
+}
+
+//--------------------------------------------//
+//					计时器  			      //
+//--------------------------------------------//
 
 light.clock.prototype.doSomething = function(){
 	//等待用户自定义
