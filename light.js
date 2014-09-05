@@ -236,14 +236,14 @@ window.light = {
 	 * author	Light
 	 */
 
-	getPixel : function(imageData, x, y){
+	getPixel : function(imageObj, x, y){
 		var r = 0,
 		g = 0,
 		b = 0,
 		a = 0,
-		d = imageData.data,
-		w = imageData.width,
-		h = imageData.height,
+		d = imageObj.data,
+		w = imageObj.width,
+		h = imageObj.height,
 		i = 4*(w*parseInt(y)+parseInt(x));
 
 		r = d[i];
@@ -259,14 +259,14 @@ window.light = {
 		}
 	},
 
-	setPixel : function(imageData, x, y, color){
+	setPixel : function(imageObj, x, y, color){
 		var r = color.r,
 		g = color.g,
 		b = color.b,
 		a = color.a,
-		d = imageData.data,
-		w = imageData.width,
-		h = imageData.height,
+		d = imageObj.data,
+		w = imageObj.width,
+		h = imageObj.height,
 		i = 4*(w*parseInt(y)+parseInt(x));
 
 		d[i] = r;
@@ -497,8 +497,11 @@ window.light = {
 
 	run : function(){
 		var self = light,
-		modelLength = self.modelStack.length,
+		modelLength = null,
 		clockLength = null;
+
+		self.modelStack = self.destoryIterm(self.modelStack);
+		modelLength = self.modelStack.length;
 
 		for(var i = 0; i < modelLength; i++){
 			self.modelStack[i].run();
