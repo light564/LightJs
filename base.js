@@ -114,34 +114,57 @@ HTMLElement.prototype.addClass = function(className){
 
 HTMLElement.prototype.bindCssEvent = function(key, fn){
 	var self = this,//TransitionEnd
+	keyTemp = key[0].toUpperCase() + key.slice(1),
 	fnThis = fn.bind(self);
-	/*if (fn === undefined) {
-		return
-	}*/
+	if (self[key] === undefined) {
+		self[key] = [];
+	}
+
+	// 已绑定此函数
+	if (self[key].indexOf(fnThis) !== -1) {
+		return self;
+	}
+
 	self.addEventListener(key, fnThis, true);
-
-	key = key[0].toUpperCase() + key.slice(1);
-
-	self.addEventListener('webkit' + key, fnThis, true);
-	self.addEventListener('moz' + key, fnThis, true);
-	self.addEventListener('o' + key, fnThis, true);
-	self[key] = fnThis;
+	self.addEventListener('webkit' + keyTemp, fnThis, true);
+	self.addEventListener('moz' + keyTemp, fnThis, true);
+	self.addEventListener('o' + keyTemp, fnThis, true);
+	self[key].push(fnThis);
 	return self;
 }
 
-HTMLElement.prototype.unbindCssEvent = function(key){
+HTMLElement.prototype.unbindCssEvent = function(key, fn){
 	var self = this,
-	fn = self[key];
-	if(fn === undefined)
-		return;
-	self.removeEventListener(key, fn, true);
+	length = self[key].length,
+	fnThis = null,
+	keyTemp = key[0].toUpperCase() + key.slice(1),
+	n = -1;
+	
+	if(length === 0)
+		return self;
+	if (fn === undefined) {
+		for(var i = 0; i < length; i++){
+			fnThis = self[key][i];
+			self.removeEventListener(key, fnThis, true);
+			self.removeEventListener('webkit' + keyTemp, fnThis, true);
+			self.removeEventListener('moz' + keyTemp, fnThis, true);
+			self.removeEventListener('o' + keyTemp, fnThis, true);
+		}
+		self[key] = undefined;
+	} else{
+		fnThis = fn.bind(self);
+		n = self[key].indexOf(fnThis);
 
-	key = key[0].toUpperCase() + key.slice(1);
+		if (n === -1) {
+			return self;
+		}
 
-	self.removeEventListener('webkit' + key, fn, true);
-	self.removeEventListener('moz' + key, fn, true);
-	self.removeEventListener('o' + key, fn, true);
-	self[key] = undefined;
+		self.removeEventListener(key, fnThis, true);
+		self.removeEventListener('webkit' + keyTemp, fnThis, true);
+		self.removeEventListener('moz' + keyTemp, fnThis, true);
+		self.removeEventListener('o' + keyTemp, fnThis, true);
+		self[key].splice(n,1);
+	}
 	return self;
 }
 
@@ -160,17 +183,12 @@ HTMLElement.prototype.cssProperty = function(key, value){
 
 HTMLElement.prototype.bindTransEnd = function(fn){
 	var self = this;
-	self.bindCssEvent('transitionend', fn);
-	return self;
+	return self.bindCssEvent('transitionend', fn);
 }
 
-HTMLElement.prototype.unbindTransEnd = function(){
-	var self = this,
-	fn = self.TransitionEnd;
-	if(fn === undefined)
-		return;
-	self.unbindCssEvent('transitionend', fn);
-	return self;
+HTMLElement.prototype.unbindTransEnd = function(fn){
+	var self = this;
+	return self.unbindCssEvent('transitionend', fn);
 }
 
 HTMLElement.prototype.fadeOut = function(fn){

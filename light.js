@@ -286,7 +286,7 @@ window.light = {
 	 * author Light
 	 */
 
-	setTurntable : function(element){
+	setTurntable : function(element, fn){
 		var self = this,
 		mousePosOld = {
 			'x' : 0,
@@ -338,6 +338,7 @@ window.light = {
 			
 			mousePosOld = mousePos;
 			element.cssProperty('transform','rotate('+angleSum+'deg)');
+			fn(angleSum);
 		},
 		mouseUp = function(ev){
 			ev = ev || window.event;
