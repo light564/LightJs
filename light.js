@@ -31,6 +31,22 @@ window.light = {
 		return true;
 	},
 
+	getPara : function(url){
+	    var paraStr = url.slice(url.indexOf('?') + 1),
+	    paraArr = paraStr.split('&'),
+	    para = {},
+	    length = paraArr.length,
+	    i = null,
+	    end = null;
+
+	    for(i = 0; i < length; i++){
+	        end = paraArr[i].indexOf('=');
+	        para[paraArr[i].slice(0, end)] = paraArr[i].slice(end + 1);
+	    }
+
+	    return para;
+	},
+
 	//遍历整个对象 找到属性值
 	getObjectValue : function(obj, key){
 		var self = this,
