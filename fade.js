@@ -15,25 +15,26 @@
         fnOld = null,
         fnFade = function(){
             var $this = $(this),
-            fnThis = fn.bind(this);
+            fnThis = null;
 
             if (type === 'out') {
                 $this.css('visibility', 'hidden');
             }
-            
-            fnThis();
+
+            if (fn) {
+                fnThis = fn.bind(this);
+                fnThis();
+            }
         };
 
-        if (fn) {
-            fnOld = self['fade'];
-            if (fnOld) {
-                $target.off('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnOld);
-            }
-
-            self['fade'] = fnFade;
-
-            $target.on('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnFade);
+        fnOld = self['fade'];
+        if (fnOld) {
+            $target.off('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnOld);
         }
+
+        self['fade'] = fnFade;
+
+        $target.on('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnFade);
 
         var transition = $target.css('transition') || $target.css('-o-transition') || $target.css('-moz-transition') || $target.css('-webkit-transition');
         
