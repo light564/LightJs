@@ -4,7 +4,8 @@
  * @date    2014-09-23
  */
 ;(function(win, lib){
-    var $ = win['Zepto'] || win['$'];
+    var $ = win['Zepto'] || win['$'],
+    noneTransition = $('html').css('transition') || $('html').css('-o-transition') || $('html').css('-moz-transition') || $('html').css('-webkit-transition');
 
     lib.fade = function ($target, conf) {
         var time = conf.time || '0.5s',
@@ -16,6 +17,7 @@
         fnFade = function(){
             var $this = $(this),
             fnThis = null;
+            
             if (type === 'out') {
                 $this.css('visibility', 'hidden');
             }
@@ -37,14 +39,14 @@
 
         var transition = $target.css('transition') || $target.css('-o-transition') || $target.css('-moz-transition') || $target.css('-webkit-transition');
         
-        if (transition !== null && transition.indexOf('opacity') === -1) {
+        if (transition !== noneTransition && transition.indexOf('opacity') === -1) {
             $target.css({
                 'transition': 'opacity ' + time + ', ' + transition,
                 '-moz-transition': 'opacity ' + time + ', ' + transition, /* Firefox 4 */
                 '-webkit-transition': 'opacity ' + time + ', ' + transition, /* Safari 和 Chrome */
                 '-o-transition': 'opacity ' + time + ', ' + transition /* Opera */
             })
-        } else if(transition === null){
+        } else if(transition === noneTransition){
             $target.css({
                 'transition': 'opacity ' + time,
                 '-moz-transition': 'opacity ' + time, /* Firefox 4 */
@@ -52,7 +54,7 @@
                 '-o-transition': 'opacity ' + time /* Opera */
             });
         }
-
+        
         if (type === 'out') {
             $target.css({
                 'opacity' : '0'
