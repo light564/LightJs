@@ -16,7 +16,6 @@
         fnFade = function(){
             var $this = $(this),
             fnThis = null;
-
             if (type === 'out') {
                 $this.css('visibility', 'hidden');
             }
@@ -29,12 +28,12 @@
 
         fnOld = self['fade'];
         if (fnOld) {
-            $target.off('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnOld);
+            $target.off('transitionend transitionEnd oTransitionend oTransitionEnd msTransitionend msTransitionEnd mozTransitionend mozTransitionEnd webkitTransitionend webkitTransitionEnd', fnOld);
         }
 
         self['fade'] = fnFade;
 
-        $target.on('transitionend oTransitionend msTransitionend mozTransitionend webkitTransitionend', fnFade);
+        $target.on('transitionend transitionEnd oTransitionend oTransitionEnd msTransitionend msTransitionEnd mozTransitionend mozTransitionEnd webkitTransitionend webkitTransitionEnd', fnFade);
 
         var transition = $target.css('transition') || $target.css('-o-transition') || $target.css('-moz-transition') || $target.css('-webkit-transition');
         
