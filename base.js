@@ -15,44 +15,71 @@ $.ajax = function(setting){
 	var rtype = setting['type'] || 'GET',
 	url = setting['url'] || '',
 	data = setting['data'] || {},
+	dataType = setting['dataType'] || 'JSON',
+	jsonpCallback = setting['jsonpCallback'] || function(){},
 	request = new XMLHttpRequest(),
 	timeout = setting['timeout'] || 10000,
 	success = setting['success'] || function(){},
 	error = setting['error'] || function(){},
 	dataSend = '';
 
-	for(var key in data){
-		dataSend += key + '=' + data[key] + '&'
-	}
-	dataSend = dataSend.slice(0,dataSend.length-1);
-	request.open(rtype, url, true);
-	request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
-	request.send(dataSend);
+	if (dataType === 'JSON') {
+		for(var key in data){
+			dataSend += key + '=' + data[key] + '&'
+		}
+		dataSend = dataSend.slice(0,dataSend.length-1);
+		request.open(rtype, url, true);
+		request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
+		request.send(dataSend);
 
-	request.onreadystatechange = function(){
+		request.onreadystatechange = function(){
 
-		if (request.readyState === 4) {
+			if (request.readyState === 4) {
 
-			if (request.status === 200) {
-				if(timer !== undefined)
-					clearTimeout(timer);
-				success(JSON.parse(request.responseText));
-			} else if (request.status === 400) {
-				if(timer !== undefined)
-					clearTimeout(timer);
-				error(JSON.parse(request.responseText));
-			} else if (request.status === 400) {
-				if(timer !== undefined)
-					clearTimeout(timer);
-				error(JSON.parse(request.responseText));
+				if (request.status === 200) {
+					if(timer !== undefined)
+						clearTimeout(timer);
+					success(JSON.parse(request.responseText));
+				} else if (request.status === 400) {
+					if(timer !== undefined)
+						clearTimeout(timer);
+					error(JSON.parse(request.responseText));
+				} else if (request.status === 400) {
+					if(timer !== undefined)
+						clearTimeout(timer);
+					error(JSON.parse(request.responseText));
+				}
 			}
+
+		}
+		var timer = setTimeout(function(){
+			request.abort();
+			error('request time out');
+		}, timeout);
+	} else if (dataType === 'JSONP') {
+		var script = document.createElement("script"),
+		$head = $('head');
+
+		window[jsonpCallback] = function(){
+			success(arguments[0]);
 		}
 
+		script.onload = function(){
+			script.removeSelf();
+			script = null;
+			delete window[jsonpCallback];
+		}
+
+		script.onerror = function(){
+			script.removeSelf();
+			script = null;
+			delete window[jsonpCallback];
+			error();
+		}
+
+		script.src = url;
+		$head.appendChild(script);
 	}
-	var timer = setTimeout(function(){
-		request.abort();
-		error('request time out');
-	}, timeout);
 };
 
 //DOM拓展
