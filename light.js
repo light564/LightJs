@@ -293,6 +293,43 @@ window.light = {
 		return;
 	},
 
+	/*
+	 * note 	绘制图片或根据函数绘制
+	 * author 	Light
+	 */
+	drawImg : function(conf){
+	    var self = this,
+	    context2D = conf.context2D,
+	    _img = conf.img,
+	    x = conf.x,
+	    y = conf.y,
+	    img_width = conf.imgWidth || _img.width,
+	    img_height = conf.imgHeight || _img.height,
+	    rotate = conf.rotate || 0,
+	    opacity = conf.opacity === undefined ? 1 : conf.opacity,
+	    center_x = conf.center_x || x+img_width/2,
+	    center_y = conf.center_y || y+img_height/2,
+	    typeImg = typeof(_img);
+
+	    if(!context2D){
+	        return;
+	    }
+	    
+	    context2D.translate(center_x, center_y);
+	    context2D.rotate(rotate);
+	    context2D.globalAlpha = opacity;
+
+	    if (typeImg === 'function') {
+	        _img();
+	    } else{
+	        context2D.drawImage(_img, x - center_x, y - center_y, img_width, img_height);
+	    }
+
+	    context2D.rotate(-rotate);
+	    context2D.translate(-center_x, -center_y);
+	    context2D.globalAlpha = 1;
+	}
+
 	//--------------------------------------------//
 	//              dom节点操作区域               //
 	//--------------------------------------------//
@@ -391,7 +428,70 @@ window.light = {
 		self.start = new Date().getTime();//计时器开始时间 ms
 
 		light.clockStack.push(self);
+
+		return self;
 	},
+
+	/*  
+	 * note 	精灵
+	 * conf 	见注释
+     * 若未初始化宽度 则为0
+     */
+    sprite : function(conf){
+        if (!(this instanceof light.sprite)){//强制使用new
+            return new light.sprite(conf);
+        }
+        var self = this;
+
+        self.context2D = conf.context2D;
+        self.name = conf.name || "sprite";
+        self.src  = conf.src || "";
+        self.x = conf.x || 0;
+        self.y = conf.y || 0;
+        self.width = conf.width || 0;
+        self.height = conf.height || 0;
+        self.rotate = conf.rotate || 0;
+        self.opacity = conf.opacity===undefined ? 1 : conf.opacity;//透明度
+        self.changeOpacity = conf.changeOpacity || null;
+        self.hotpot = conf.hotpot || false;//鼠标热点  true后鼠标为手型
+
+        /*元素动作*/
+        self.v = conf.v || 0;//移动速度  s
+        self.angle = conf.angle || 0;//移动方向  s
+        self.w = conf.w || 0;//旋转角速度  s
+
+        /*元素范围限定*/
+        self.moveTo_x = conf.moveTo_x || null;
+        self.moveTo_y = conf.moveTo_y || null;
+        self.rotateAngle = conf.rotateAngle || null;
+        self.rotateAngleCallBack = conf.rotateAngleCallBack || null;
+
+        /*fadein and fadeout*/
+        self.fadeTime = conf.fadeTime || null;
+        self.fadeFlag = conf.fadeFlag || null;
+        self.fadeCallback = conf.fadeCallback || null;
+
+        /*改变大小*/
+        self.oldWidth = conf.oldWidth || null;
+        self.oldHeight = conf.oldHeight || null;
+        self.changeTime = conf.changeTime || null;
+        self.changeWidth = conf.changeWidth || null;
+        self.changeHeight = conf.changeHeight || null;
+        self.changeSizeCallback = conf.changeSizeCallback || null;
+
+        /*旋转中心*/
+        self.rotateCenterX = conf.rotateCenterX || null;
+        self.rotateCenterY = conf.rotateCenterY || null;
+
+        self.animations = [];
+        self.curAnimation = "Default";//当前播放的用户名
+        self.curFrame = 0;//当前显示的图片序号
+        self.frameStart = new Date().getTime();//一帧动画开始的时间（结束后刷新）
+        self.old = self.frameStart;//移动前的时间
+
+        self.destoryOutside = false;
+        self.destory = false;
+    },
 
 
 	/*
@@ -412,7 +512,7 @@ window.light = {
 		self.evolving = conf.evolving || false,//是否继续扩散
 		self.damping = conf.damping || 0.98,//能量衰减
 		self.clipping = conf.clipping || 5,//最大幅度
-		self.evolveThreshold = conf.evolveThreshold || 0.05,//最小幅度
+		self.evolveThreshold = conf.evolveThreshold || 0.02,//最小幅度
 		self.lightRefraction = conf.lightRefraction || 5.0,
 		self.lightReflection = conf.lightReflection || 0.01,
 		self.context2D = conf.context2D,
@@ -535,6 +635,337 @@ window.light = {
 	}
 }
 
+//----------------------------------------------//
+//                    精灵                      //
+//----------------------------------------------//
+
+light.sprite.prototype.draw = function(_img, x, y, img_width, img_height, rotate, opacity){
+    var self = this;
+
+    if(!(x && y)){
+        x = self.x;
+        y = self.y;
+    }
+    if(!rotate){
+        rotate = self.rotate;
+    }
+    if(!img_width){
+        img_width = self.width;
+    }
+    if(!img_height){
+        img_height = self.height;
+    }
+    if(opacity == null){
+        opacity = self.opacity;
+    }
+
+    light.drawImg({
+        'context2D' : self.context2D,
+        'img' : _img,
+        'x' : x,
+        'y' : y,
+        'imgWidth' : img_width,
+        'imgHeight' : img_height,
+        'rotate' : rotate,
+        'opacity' : opacity,
+        'center_x' : self.rotateCenterX,
+        'center_y' : self.rotateCenterY
+    });    
+}
+
+light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){//不包含动画  左上角坐标点  movet s
+    var self = this;
+
+    self.moveTo_x = x;
+    self.moveTo_y = y;
+    if(movet){
+        self.v = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))/movet;
+    }
+    if(x == self.x){
+        y > self.y ? self.angle = Math.PI/2 : self.angle = Math.PI*3/2;
+        var t = (y-self.y)/self.v;
+        self.resize(width, height,t,callback);
+        return;
+    }
+
+    self.angle = Math.atan((y-self.y)/(x-self.x));//13正 24负
+
+    if(x < self.x){
+        self.angle = self.angle+Math.PI;
+    }
+    var t = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))/self.v;
+    self.resize(width, height, t, callback);
+}
+
+light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 fadeOut 1 fadeIn
+    var self = this;
+
+    if(callback){
+        self.fadeCallback = callback.bind(self);
+    }
+    if(time){
+        self.fadeTime = time;
+    }
+    if(flag){
+        self.fadeFlag = flag;
+        return;
+    }
+    if((!self.fadeTime) && (!self.fadeFlag)){
+        return;
+    }
+
+    if(self.changeOpacity == null){
+        if(self.fadeFlag == -1)
+            self.changeOpacity = Math.abs(self.opacity - 0);
+        if(self.fadeFlag == 1)
+            self.changeOpacity = Math.abs(self.opacity - 1);
+    }
+    var now = new Date().getTime();
+    
+    self.opacity = self.opacity + self.fadeFlag*(self.changeOpacity*(now - self.old)/self.fadeTime);
+    if(self.opacity > 1){
+        self.opacity = 1;
+        self.changeOpacity = self.opacity;
+        self.fadeTime = null;
+        self.fadeFlag = null;
+        if(self.fadeCallback)
+            self.fadeCallback();
+        return;
+    }
+    if(self.opacity < 0){
+        self.opacity = 0;
+        self.old_opacity = self.opacity;
+        self.fadeTime = null;
+        self.fadeFlag = null;
+        if(self.fadeCallback)
+            self.fadeCallback();
+        self.fadeCallback = null;
+        return;
+    }
+}
+
+light.sprite.prototype.click = function(){//点击后发生的事件
+
+}
+
+light.sprite.prototype.isOnSprite = function(x, y){
+    var self = this;
+
+    if(x > self.x && x < self.x+self.width && y > self.y && y < self.y+self.height){
+        return true;
+    }
+    return false
+}
+
+light.sprite.prototype.reviseAngle = function(){//将速度角度限定为0-360度
+    var self = this;
+
+    for(var i = 1; self.angle >= Math.PI*2; i++){
+        self.angle = self.angle - Math.PI*2*i;
+        
+    }
+    for(var i = 1; self.angle < 0; i++){
+        self.angle = self.angle + Math.PI*2*i;
+    }
+}
+
+light.sprite.prototype.resize = function(width, height, time, callback){
+    var self = this;
+
+    if(callback){
+        self.changeSizeCallback = callback;
+    }
+    if(width){
+        self.oldWidth = self.width;
+        self.changeWidth = width - self.width;
+    }
+    if(height){
+        self.oldHeight = self.height;
+        self.changeHeight = height - self.height;
+    }
+    if(time){
+        self.changeTime = time;
+        return;
+    }
+    if((!self.changeTime) && (!self.changeHeight) && (!self.changeWidth)){
+        return;
+    }
+    var now = new Date().getTime();
+    self.width = self.width + (self.changeWidth*1000/self.changeTime*(now - self.old));
+    self.height = self.height + (self.changeHeight*1000/self.changeTime*(now - self.old));
+
+    if( (Math.abs(self.width - self.oldWidth) > Math.abs(self.changeWidth)) || (Math.abs(self.height - self.oldHeight) > Math.abs(self.changeHeight))){
+        self.oldWidth = null;
+        self.oldHeight = null;
+        self.changeTime = null;
+        self.changeWidth = null;
+        self.changeHeight = null;
+
+        if(self.changeSizeCallback)
+            self.changeSizeCallback();
+        self.changeSizeCallback = null;
+        return;
+    }
+}
+
+light.sprite.prototype.isDestination = function(){//判断是否到达目的地  不含旋转角度
+    var self = this;
+
+    if(self.moveTo_x != null && self.moveTo_y != null){
+        self.reviseAngle();
+        if(self.angle >= 0 && self.angle < Math.PI/2){//速度方向在第一象限
+            if(self.moveTo_x <= self.x && self.moveTo_y <= self.y+1e-13){
+                self.x = self.moveTo_x;
+                self.y = self.moveTo_y;
+
+                self.moveTo_x = null;
+                self.moveTo_y = null;
+                self.v = 0;
+                self.angle = 0;
+            }
+        }
+        if(self.angle >= Math.PI/2 && self.angle < Math.PI){//速度方向在第二象限
+            if(self.moveTo_x >= self.x && self.moveTo_y <= self.y+1e-13){
+                self.x = self.moveTo_x;
+                self.y = self.moveTo_y;
+
+                self.moveTo_x = null;
+                self.moveTo_y = null;
+                self.v = 0;
+                self.angle = 0;
+            }
+        }
+        if(self.angle >= Math.PI && self.angle < Math.PI*3/2){//速度方向在第三象限
+            if(self.moveTo_x >= self.x && self.moveTo_y+1e-13 >= self.y){
+                self.x = self.moveTo_x;
+                self.y = self.moveTo_y;
+
+                self.moveTo_x = null;
+                self.moveTo_y = null;
+                self.v = 0;
+                self.angle = 0;
+            }
+        }
+        if(self.angle >= Math.PI*3/2 && self.angle < Math.PI*2){//速度方向在第四象限
+            if(self.moveTo_x <= self.x && self.moveTo_y+1e-13 >= self.y){
+                self.x = self.moveTo_x;
+                self.y = self.moveTo_y;
+
+                self.moveTo_x = null;
+                self.moveTo_y = null;
+                self.v = 0;
+                self.angle = 0;
+            }
+        }
+    }
+}
+
+light.sprite.prototype.isRotateToAngle = function(){//旋转角度限定
+    var self = this;
+
+    if(self.rotateAngle != null){
+        if(self.w > 0){
+            if(self.rotate >= self.rotateAngle){
+                self.rotate = self.rotateAngle;
+                self.w = 0;
+
+                if (self.rotateAngleCallBack)
+                    self.rotateAngleCallBack.call(self);
+            }
+        }
+        if(self.w < 0){
+            if(self.rotate <= self.rotateAngle){
+                self.rotate = self.rotateAngle;
+                self.w = 0;
+                
+                if (self.rotateAngleCallBack)
+                    self.rotateAngleCallBack.call(self);
+            }
+        }
+    }
+}
+
+light.sprite.prototype.createAnim = function(anim){
+    var self = this,
+    animobj = {},
+    length = anim.frames.length,
+    inputType = typeof(anim.frames[0]);
+
+    animobj.name = anim.name || 'Default';
+    animobj.speed = anim.speed || 10;//动画播放速度  s
+    animobj.frames = [];
+
+    for(var i = 0; i < length; i++){
+        if (inputType === 'string') {
+            var tempImg = new Image();
+            tempImg.src = anim.frames[i];
+            animobj.frames.push(tempImg);//存入图片对象
+        } else if(inputType === 'function'){
+            animobj.frames.push(anim.frames[i]);//存入绘制
+        }
+    }
+
+    var anim = self.getanimByName(animobj.name);//返回的依然是引用类型
+
+    if(anim){
+        anim = animobj;
+    }
+    else{
+        self.animations.push(animobj);//对象压入数组
+    }
+}
+
+light.sprite.prototype.getanimByName = function(name){
+    var self = this,
+    anims = self.animations;
+    length = anims.length;
+
+    for(var i = 0; i < length; i++){
+        if(anims[i].name == name){
+            return anims[i];
+        }
+    }
+    return null;
+}
+
+light.sprite.prototype.runAnimation = function(anim){
+    var self = this,
+    animobj = anim,
+    cur_frame_gap = 1000.0/animobj.speed,//s
+    now = new Date().getTime(),//ms  当前时间
+    typeFrame = typeof(animobj.frames[self.curFrame]);
+    
+    self.x = self.x + self.v*(now - self.old)*Math.cos(self.angle)/1000.0;
+    self.y = self.y + self.v*(now - self.old)*Math.sin(self.angle)/1000.0;
+    self.isDestination();
+    self.isRotateToAngle();
+    self.fade();
+    self.resize();
+    self.rotate = self.rotate + self.w*(now - self.old)/1000;
+    if (typeFrame === 'function') {
+        self.draw(animobj.frames[self.curFrame].bind(self));
+    } else{
+        self.draw(animobj.frames[self.curFrame]);//绘制
+    }
+    self.old = now;
+
+    if(now >= self.frameStart + cur_frame_gap){
+        self.frameStart = new Date().getTime();
+        self.curFrame++;
+        if(self.curFrame >= animobj.frames.length){
+            self.curFrame = 0;
+        }
+    }
+}
+
+light.sprite.prototype.run = function(name){
+    var self = this,
+    animName = name || 'Default',
+    anim = self.getanimByName(animName);
+
+    self.runAnimation(anim);
+}
+
 //--------------------------------------------//
 //                    水纹                    //
 //--------------------------------------------//
@@ -557,13 +988,13 @@ light.waterModel.prototype.amplitude = function(){
 		for (y = 1; y <= self.height; y++) {
 
 			// Handle borders correctly
-			val = 	self.amplitudeMap1[x - 1][y] + self.amplitudeMap1[x + 1][y] + self.amplitudeMap1[x][y - 1] + self.amplitudeMap1[x][y + 1];
+			val = self.amplitudeMap1[x - 1][y] + self.amplitudeMap1[x + 1][y] + self.amplitudeMap1[x][y - 1] + self.amplitudeMap1[x][y + 1];
 
 			// Damping
 			val = ((val / 2.0) - self.amplitudeMap2[x][y]) * self.damping;
 			
 			// Clipping prevention
-			if (val === 0){
+			if (Math.abs(val) <= self.evolveThreshold){
 				self.amplitudeMap2[x][y] = 0.0;
 				continue;
 			} else if (val>self.clipping) {
@@ -573,11 +1004,7 @@ light.waterModel.prototype.amplitude = function(){
 			}
 			
 			// Evolve check
-			if(Math.abs(val) > self.evolveThreshold) {
-				self.evolving = true;
-			} else {
-				self.amplitudeMap2[x][y] = 0.0;
-			}
+			self.evolving = true;
 			
 			self.amplitudeMap2[x][y] = val;
 		}

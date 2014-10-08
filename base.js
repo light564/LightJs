@@ -162,7 +162,7 @@ HTMLElement.prototype.bindCssEvent = function(key, fn){
 
 HTMLElement.prototype.unbindCssEvent = function(key, fn){
 	var self = this,
-	length = self[key].length,
+	length = self[key] ? self[key].length : 0,
 	fnThis = null,
 	keyTemp = key[0].toUpperCase() + key.slice(1),
 	n = -1;
