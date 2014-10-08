@@ -328,7 +328,7 @@ window.light = {
 	    context2D.rotate(-rotate);
 	    context2D.translate(-center_x, -center_y);
 	    context2D.globalAlpha = 1;
-	}
+	},
 
 	//--------------------------------------------//
 	//              dom节点操作区域               //
