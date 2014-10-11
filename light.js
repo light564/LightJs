@@ -435,7 +435,7 @@ window.light = {
 	/*  
 	 * note 	精灵
 	 * conf 	见注释
-     * 若未初始化宽度 则为0
+     * 若未初始化宽度,高度，则取图片高宽
      */
     sprite : function(conf){
         if (!(this instanceof light.sprite)){//强制使用new
@@ -898,6 +898,17 @@ light.sprite.prototype.createAnim = function(anim){
     for(var i = 0; i < length; i++){
         if (inputType === 'string') {
             var tempImg = new Image();
+
+            tempImg.onload = function(){
+            	if (!self.width) {
+            		self.width = tempImg.width;
+            	}
+
+            	if (!self.height) {
+            		self.height = tempImg.height;
+            	}
+            }
+
             tempImg.src = anim.frames[i];
             animobj.frames.push(tempImg);//存入图片对象
         } else if(inputType === 'function'){
