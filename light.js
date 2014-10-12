@@ -1,444 +1,444 @@
 window.light = {
 
-	// new后的Model push到后面，统一调度
-	modelStack : [],
-	// new后的clock
-	clockStack : [],
-				
-	isObject : function(obj){
-		return obj === Object(obj);
-	},
+    // new后的Model push到后面，统一调度
+    modelStack : [],
+    // new后的clock
+    clockStack : [],
+                
+    isObject : function(obj){
+        return obj === Object(obj);
+    },
 
-	isUndefined : function(obj){
-		return obj === void 0;
-	},
+    isUndefined : function(obj){
+        return obj === void 0;
+    },
 
-	isString :function(obj){
-		return Object.prototype.toString.call(obj) == '[object String]';
-	},
+    isString :function(obj){
+        return Object.prototype.toString.call(obj) == '[object String]';
+    },
 
-	isEmail: function(email){
-		if (email.match('@') === null) {
-			return false;
-		}
-		return true;
-	},
+    isEmail: function(email){
+        if (email.match('@') === null) {
+            return false;
+        }
+        return true;
+    },
 
-	isMobilePhone: function(phone){
-		if (phone.match(/(?:\(?[0\+]?\d{1,3}\)?)[\s-]?(?:0|\d{1,4})[\s-]?(?:(?:13\d{9})|(?:\d{7,8}))/) === null) {
-			return false;
-		}
-		return true;
-	},
+    isMobilePhone: function(phone){
+        if (phone.match(/(?:\(?[0\+]?\d{1,3}\)?)[\s-]?(?:0|\d{1,4})[\s-]?(?:(?:13\d{9})|(?:\d{7,8}))/) === null) {
+            return false;
+        }
+        return true;
+    },
 
-	getPara : function(url){
-	    var paraStr = url.slice(url.indexOf('?') + 1),
-	    paraArr = paraStr.split('&'),
-	    para = {},
-	    length = paraArr.length,
-	    i = null,
-	    end = null;
+    getPara : function(url){
+        var paraStr = url.slice(url.indexOf('?') + 1),
+        paraArr = paraStr.split('&'),
+        para = {},
+        length = paraArr.length,
+        i = null,
+        end = null;
 
-	    for(i = 0; i < length; i++){
-	        end = paraArr[i].indexOf('=');
-	        para[paraArr[i].slice(0, end)] = paraArr[i].slice(end + 1);
-	    }
+        for(i = 0; i < length; i++){
+            end = paraArr[i].indexOf('=');
+            para[paraArr[i].slice(0, end)] = paraArr[i].slice(end + 1);
+        }
 
-	    return para;
-	},
+        return para;
+    },
 
-	//遍历整个对象 找到属性值
-	getObjectValue : function(obj, key){
-		var self = this,
-		value = null;
+    //遍历整个对象 找到属性值
+    getObjectValue : function(obj, key){
+        var self = this,
+        value = null;
 
-		if (self.isString(obj)) {
-			return obj;
-		}
+        if (self.isString(obj)) {
+            return obj;
+        }
 
-		if (obj.hasOwnProperty(key)) {
-			return obj[key];
-		}
+        if (obj.hasOwnProperty(key)) {
+            return obj[key];
+        }
 
-		for(var v in obj){
-			if (self.isObject(obj[v]) && (value = self.getObjectValue(obj[v], key)) !== null) {
-				return value;
-			}
-		}
+        for(var v in obj){
+            if (self.isObject(obj[v]) && (value = self.getObjectValue(obj[v], key)) !== null) {
+                return value;
+            }
+        }
 
-		return value;
+        return value;
 
-	},
+    },
 
-	/* 
-	 * note 模板生成
-	 * selector:要处理的模板的标识   viewData:生成dom节点所用数据
-	 * 没有值返回null,对应操作为删除属性
-	 * each 不能有大于一个参数 tmp-each 必须为数组
-	 * TODO: 节点嵌套
-	 */
-	renderView : function(selector, viewData){
-		var self = this,
-		templateParent = $('#template'),
-		templateNode = null;
-		
-		if (self.isString(selector)) {
-			templateNode = templateParent.find('[template='+selector+']').cloneNode(true);
-		} else {
-			templateNode = selector.cloneNode(true);
-		}
+    /* 
+     * note 模板生成
+     * selector:要处理的模板的标识   viewData:生成dom节点所用数据
+     * 没有值返回null,对应操作为删除属性
+     * each 不能有大于一个参数 tmp-each 必须为数组
+     * TODO: 节点嵌套
+     */
+    renderView : function(selector, viewData){
+        var self = this,
+        templateParent = $('#template'),
+        templateNode = null;
+        
+        if (self.isString(selector)) {
+            templateNode = templateParent.find('[template='+selector+']').cloneNode(true);
+        } else {
+            templateNode = selector.cloneNode(true);
+        }
 
-		var childSelector = null,
-		childNode = null,
-		keyList = templateNode.attr('tmp-value').split(','),
-		attrList = templateNode.attr('tmp-attr').split(','),
-		length = keyList.length;
+        var childSelector = null,
+        childNode = null,
+        keyList = templateNode.attr('tmp-value').split(','),
+        attrList = templateNode.attr('tmp-attr').split(','),
+        length = keyList.length;
 
-		for(var i = 0; i < length; i++){
-			
-			if (keyList[i] === '') {
-				keyList.shift(i);
-				length--;
-				i--;
-				continue;
-			}
+        for(var i = 0; i < length; i++){
+            
+            if (keyList[i] === '') {
+                keyList.shift(i);
+                length--;
+                i--;
+                continue;
+            }
 
-			var tempValue = self.getObjectValue(viewData, keyList[i]);
-			if (attrList[i] === '*' || attrList[i] === '' || self.isUndefined(attrList[i])) {
-				templateNode.innerHTML += tempValue;
-			} else{
-				templateNode.attr(attrList[i], tempValue);
-			}
+            var tempValue = self.getObjectValue(viewData, keyList[i]);
+            if (attrList[i] === '*' || attrList[i] === '' || self.isUndefined(attrList[i])) {
+                templateNode.innerHTML += tempValue;
+            } else{
+                templateNode.attr(attrList[i], tempValue);
+            }
 
-		}
-		templateNode.attr('tmp-value',null);
-		templateNode.attr('tmp-attr',null);
+        }
+        templateNode.attr('tmp-value',null);
+        templateNode.attr('tmp-attr',null);
 
-		if (templateNode.attr('tmp-each') !== '') {
-			
-			childSelector = templateNode.attr('tmp-each-item');
-			var valueList = self.getObjectValue(viewData, templateNode.attr('tmp-each'));
-			var tmpChildNode = templateParent.find('[template='+childSelector+']');
-			valueList.forEach(function(v){
-				childNode = self.renderView(tmpChildNode, v);
-				templateNode.appendChild(childNode);
-			});
+        if (templateNode.attr('tmp-each') !== '') {
+            
+            childSelector = templateNode.attr('tmp-each-item');
+            var valueList = self.getObjectValue(viewData, templateNode.attr('tmp-each'));
+            var tmpChildNode = templateParent.find('[template='+childSelector+']');
+            valueList.forEach(function(v){
+                childNode = self.renderView(tmpChildNode, v);
+                templateNode.appendChild(childNode);
+            });
 
-			templateNode.attr('tmp-each',null);
-			templateNode.attr('tmp-each-item',null);
+            templateNode.attr('tmp-each',null);
+            templateNode.attr('tmp-each-item',null);
 
-		}
-		templateNode.attr('template', null);
-		templateNode.style.display = 'block';
+        }
+        templateNode.attr('template', null);
+        templateNode.style.display = 'block';
 
-		return templateNode;
-	},
-	/********************************************************************************************************/
-	//                                           动画区域
-	//
-	/********************************************************************************************************/
+        return templateNode;
+    },
+    /********************************************************************************************************/
+    //                                           动画区域
+    //
+    /********************************************************************************************************/
 
-	//--------------------------------------------//
-	//                  数学区域                  //
-	//--------------------------------------------//
-	// 取范围内随机数
+    //--------------------------------------------//
+    //                  数学区域                  //
+    //--------------------------------------------//
+    // 取范围内随机数
     randomRange : function(begin, end){
         return Math.random()*(end - begin) + begin;
     },
-	/*
-	 * note 	获取向量与x+方向的夹角
-	 * author 	Light
-	 * parameter p 点
-	 */
-	getAngle : function(p){
-		var angle = null;
-		if (p.x === 0) {
-			if (p.y >= 0) {
-				return 180/2;
-			} else{
-				return 180*3/2;
-			}
-		}
-		// 1象限
-		angle = Math.atan(p.y/p.x) / Math.PI * 180;
-		// 2象限
-		if (p.x < 0 && p.y > 0) {
-			angle = angle + 180;
-		}
-		// 3象限
-		if (p.x < 0 && p.y < 0) {
-			angle = angle + 180;
-		}
-		// 4象限
-		if (p.y < 0 && p.x > 0) {
-			angle = angle + 2 * 180;
-		}
-		return angle;
-	},
+    /*
+     * note     获取向量与x+方向的夹角
+     * author     Light
+     * parameter p 点
+     */
+    getAngle : function(p){
+        var angle = null;
+        if (p.x === 0) {
+            if (p.y >= 0) {
+                return 180/2;
+            } else{
+                return 180*3/2;
+            }
+        }
+        // 1象限
+        angle = Math.atan(p.y/p.x) / Math.PI * 180;
+        // 2象限
+        if (p.x < 0 && p.y > 0) {
+            angle = angle + 180;
+        }
+        // 3象限
+        if (p.x < 0 && p.y < 0) {
+            angle = angle + 180;
+        }
+        // 4象限
+        if (p.y < 0 && p.x > 0) {
+            angle = angle + 2 * 180;
+        }
+        return angle;
+    },
 
-	/*
-	 * note 获取直线方程
-	 * 传入参数，2个点{x:10,y:10};    
-	 * return Ax+By+C=0  A2,B2  边长比例
-	 */
+    /*
+     * note 获取直线方程
+     * 传入参数，2个点{x:10,y:10};    
+     * return Ax+By+C=0  A2,B2  边长比例
+     */
 
-	getLineFunction : function(p1, p2){
-		var k = (p1.y - p2.y) / (p2.x - p1.x),
-		c = -k * p1.x - p1.y;
+    getLineFunction : function(p1, p2){
+        var k = (p1.y - p2.y) / (p2.x - p1.x),
+        c = -k * p1.x - p1.y;
 
-		if (p2.x === p1.x && p1.y === p2.y) {
-			return null;
-		}
+        if (p2.x === p1.x && p1.y === p2.y) {
+            return null;
+        }
 
-		if (k === Infinity || k === -Infinity) {
-			return {
-				'A' : 1,
-				'B' : 0,
-				'C' : -p1.x
-			};
-		}
+        if (k === Infinity || k === -Infinity) {
+            return {
+                'A' : 1,
+                'B' : 0,
+                'C' : -p1.x
+            };
+        }
 
-		return {
-			'A' : k,
-			'B' : 1,
-			'C' : c
-		}
-	},
+        return {
+            'A' : k,
+            'B' : 1,
+            'C' : c
+        }
+    },
 
-	lineFunctionResult : function(l,p){
-		return l.A*p.x + l.B*p.y + l.C
-	},
+    lineFunctionResult : function(l,p){
+        return l.A*p.x + l.B*p.y + l.C
+    },
 
-	getLinePoint : function(l1, l2){
-		if (l1.A === l2.A && l1.B === l2.B) {
-			return null;
-		}
+    getLinePoint : function(l1, l2){
+        if (l1.A === l2.A && l1.B === l2.B) {
+            return null;
+        }
 
-		var y = (l1.A*l2.C - l2.A*l1.C)/(l2.A*l1.B - l1.A*l2.B),
-		x = -(l1.B*y + l1.C)/l1.A;
+        var y = (l1.A*l2.C - l2.A*l1.C)/(l2.A*l1.B - l1.A*l2.B),
+        x = -(l1.B*y + l1.C)/l1.A;
 
-		return {
-			'x': x,
-			'y': y
-		}
-	},
+        return {
+            'x': x,
+            'y': y
+        }
+    },
 
-	/*
-	 * note 	判断点是否在矩形区域中
-	 * rectangle={p1,p2,p3,p4} 顺时针，左上角第一个; l{l1,l2,l3,l4}
-	 */
-	inRectangle : function(rect, p, l){
-		var self = this,
-		l = l || {l1:undefined,l2:undefined,l3:undefined,l4:undefined}
-		l1 = l.l1 || self.getLineFunction(rect.p1, rect.p2),
-		l2 = l.l2 || self.getLineFunction(rect.p2, rect.p3),
-		l3 = l.l3 || self.getLineFunction(rect.p3, rect.p4),
-		l4 = l.l4 || self.getLineFunction(rect.p4, rect.p1);
+    /*
+     * note     判断点是否在矩形区域中
+     * rectangle={p1,p2,p3,p4} 顺时针，左上角第一个; l{l1,l2,l3,l4}
+     */
+    inRectangle : function(rect, p, l){
+        var self = this,
+        l = l || {l1:undefined,l2:undefined,l3:undefined,l4:undefined}
+        l1 = l.l1 || self.getLineFunction(rect.p1, rect.p2),
+        l2 = l.l2 || self.getLineFunction(rect.p2, rect.p3),
+        l3 = l.l3 || self.getLineFunction(rect.p3, rect.p4),
+        l4 = l.l4 || self.getLineFunction(rect.p4, rect.p1);
 
-		var r1 = self.lineFunctionResult(l1,p),
-		r2 = self.lineFunctionResult(l2,p),
-		r3 = self.lineFunctionResult(l3,p),
-		r4 = self.lineFunctionResult(l4,p);
+        var r1 = self.lineFunctionResult(l1,p),
+        r2 = self.lineFunctionResult(l2,p),
+        r3 = self.lineFunctionResult(l3,p),
+        r4 = self.lineFunctionResult(l4,p);
 
-		// 忽略可能出现的计算误差
-		if (r1 * r3 <= 0 && r2 * r4 <= 0) {
-			return true;
-		}
+        // 忽略可能出现的计算误差
+        if (r1 * r3 <= 0 && r2 * r4 <= 0) {
+            return true;
+        }
 
-		return false;
-	},
+        return false;
+    },
 
-	//--------------------------------------------//
-	//              canvas操作区域                //
-	//--------------------------------------------//
-	/*
-	 * note 	获取imageData 中 像素点的值
-	 * author	Light
-	 */
+    //--------------------------------------------//
+    //              canvas操作区域                //
+    //--------------------------------------------//
+    /*
+     * note     获取imageData 中 像素点的值
+     * author    Light
+     */
 
-	getPixel : function(imageObj, x, y){
-		var r = 0,
-		g = 0,
-		b = 0,
-		a = 0,
-		d = imageObj.data,
-		w = imageObj.width,
-		h = imageObj.height,
-		i = 4*(w*parseInt(y)+parseInt(x));
+    getPixel : function(imageObj, x, y){
+        var r = 0,
+        g = 0,
+        b = 0,
+        a = 0,
+        d = imageObj.data,
+        w = imageObj.width,
+        h = imageObj.height,
+        i = 4*(w*parseInt(y)+parseInt(x));
 
-		r = d[i];
-		g = d[i + 1];
-		b = d[i + 2];
-		a = d[i + 3];
+        r = d[i];
+        g = d[i + 1];
+        b = d[i + 2];
+        a = d[i + 3];
 
-		return {
-			'r' : r,
-			'g' : g,
-			'b' : b,
-			'a' : a
-		}
-	},
+        return {
+            'r' : r,
+            'g' : g,
+            'b' : b,
+            'a' : a
+        }
+    },
 
-	setPixel : function(imageObj, x, y, color){
-		var r = color.r,
-		g = color.g,
-		b = color.b,
-		a = color.a,
-		d = imageObj.data,
-		w = imageObj.width,
-		h = imageObj.height,
-		i = 4*(w*parseInt(y)+parseInt(x));
+    setPixel : function(imageObj, x, y, color){
+        var r = color.r,
+        g = color.g,
+        b = color.b,
+        a = color.a,
+        d = imageObj.data,
+        w = imageObj.width,
+        h = imageObj.height,
+        i = 4*(w*parseInt(y)+parseInt(x));
 
-		d[i] = r;
-		d[i + 1] = g;
-		d[i + 2] = b;
-		d[i + 3] = a;
+        d[i] = r;
+        d[i + 1] = g;
+        d[i + 2] = b;
+        d[i + 3] = a;
 
-		return;
-	},
+        return;
+    },
 
-	/*
-	 * note 	绘制图片或根据函数绘制
-	 * author 	Light
-	 */
-	drawImg : function(conf){
-	    var self = this,
-	    context2D = conf.context2D,
-	    _img = conf.img,
-	    x = conf.x,
-	    y = conf.y,
-	    img_width = conf.imgWidth || _img.width,
-	    img_height = conf.imgHeight || _img.height,
-	    rotate = conf.rotate || 0,
-	    opacity = conf.opacity === undefined ? 1 : conf.opacity,
-	    center_x = conf.center_x || x+img_width/2,
-	    center_y = conf.center_y || y+img_height/2,
-	    typeImg = typeof(_img);
+    /*
+     * note     绘制图片或根据函数绘制
+     * author     Light
+     */
+    drawImg : function(conf){
+        var self = this,
+        context2D = conf.context2D,
+        _img = conf.img,
+        x = conf.x,
+        y = conf.y,
+        img_width = conf.imgWidth || _img.width,
+        img_height = conf.imgHeight || _img.height,
+        rotate = conf.rotate || 0,
+        opacity = conf.opacity === undefined ? 1 : conf.opacity,
+        center_x = conf.center_x || x+img_width/2,
+        center_y = conf.center_y || y+img_height/2,
+        typeImg = typeof(_img);
 
-	    if(!context2D){
-	        return;
-	    }
-	    
-	    context2D.translate(center_x, center_y);
-	    context2D.rotate(rotate);
-	    context2D.globalAlpha = opacity;
+        if(!context2D){
+            return;
+        }
+        
+        context2D.translate(center_x, center_y);
+        context2D.rotate(rotate);
+        context2D.globalAlpha = opacity;
 
-	    if (typeImg === 'function') {
-	        _img();
-	    } else{
-	        context2D.drawImage(_img, x - center_x, y - center_y, img_width, img_height);
-	    }
+        if (typeImg === 'function') {
+            _img();
+        } else{
+            context2D.drawImage(_img, x - center_x, y - center_y, img_width, img_height);
+        }
 
-	    context2D.rotate(-rotate);
-	    context2D.translate(-center_x, -center_y);
-	    context2D.globalAlpha = 1;
-	},
+        context2D.rotate(-rotate);
+        context2D.translate(-center_x, -center_y);
+        context2D.globalAlpha = 1;
+    },
 
-	//--------------------------------------------//
-	//              dom节点操作区域               //
-	//--------------------------------------------//
+    //--------------------------------------------//
+    //              dom节点操作区域               //
+    //--------------------------------------------//
 
-	/*
-	 * note 鼠标拖动旋转
-	 * author Light
-	 */
+    /*
+     * note 鼠标拖动旋转
+     * author Light
+     */
 
-	setTurntable : function(element, fn){
-		var self = this,
-		mousePosOld = {
-			'x' : 0,
-			'y' : 0,
-			'angle' : 0
-		},
-		angleSum = +element.attr('style').match(/rotate\((\d+)deg\)/)[1],
-		offset = element.getOffset(),
-		centerPoint = {
-			'x' : parseInt(offset.left + element.clientWidth / 2),
-			'y' : parseInt(offset.top + element.clientHeight / 2)
-		},
-		key = false;
+    setTurntable : function(element, fn){
+        var self = this,
+        mousePosOld = {
+            'x' : 0,
+            'y' : 0,
+            'angle' : 0
+        },
+        angleSum = +element.attr('style').match(/rotate\((\d+)deg\)/)[1],
+        offset = element.getOffset(),
+        centerPoint = {
+            'x' : parseInt(offset.left + element.clientWidth / 2),
+            'y' : parseInt(offset.top + element.clientHeight / 2)
+        },
+        key = false;
 
-		if (window.isNaN(mousePosOld.angleSum)) {
-			mousePosOld.angleSum = 0;
-		}
+        if (window.isNaN(mousePosOld.angleSum)) {
+            mousePosOld.angleSum = 0;
+        }
 
-		var mouseDown = function(ev){
-			ev = ev || window.event; 
-			if(ev.button == 2 || ev.button == 3){
-				return;
-			}
-			var mousePos = mousePosition(ev);
+        var mouseDown = function(ev){
+            ev = ev || window.event; 
+            if(ev.button == 2 || ev.button == 3){
+                return;
+            }
+            var mousePos = mousePosition(ev);
 
-			key = true;
-			mousePosOld.x = parseInt(mousePos.x - centerPoint.x);
-			mousePosOld.y = parseInt(mousePos.y - centerPoint.y);
-			mousePosOld.angle = parseInt(self.getAngle(mousePosOld));
-		},
-		mouseMove = function(ev){
-			ev = ev || window.event; 
-			if(ev.button == 2 || ev.button == 3 || key === false){
-				return;
-			}
-			var mousePos = mousePosition(ev),
-			gap = 0;
-			mousePos.x = parseInt(mousePos.x - centerPoint.x);
-			mousePos.y = parseInt(mousePos.y - centerPoint.y);
-			mousePos.angle = parseInt(self.getAngle(mousePos));
-			gap = mousePos.angle - mousePosOld.angle;
-			if (Math.abs(gap) < 100) {
-				angleSum += mousePos.angle - mousePosOld.angle;
-			} else if (gap > 0) {
-				angleSum += mousePos.angle - mousePosOld.angle - 360;
-			} else {
-				angleSum += mousePos.angle - mousePosOld.angle + 360;
-			}
-			
-			mousePosOld = mousePos;
-			element.cssProperty('transform','rotate('+angleSum+'deg)');
-			fn(angleSum);
-		},
-		mouseUp = function(ev){
-			ev = ev || window.event;
-			if(ev.button == 2 || ev.button == 3){
-				return;
-			}
-			key = false;
-			return;
-		};
+            key = true;
+            mousePosOld.x = parseInt(mousePos.x - centerPoint.x);
+            mousePosOld.y = parseInt(mousePos.y - centerPoint.y);
+            mousePosOld.angle = parseInt(self.getAngle(mousePosOld));
+        },
+        mouseMove = function(ev){
+            ev = ev || window.event; 
+            if(ev.button == 2 || ev.button == 3 || key === false){
+                return;
+            }
+            var mousePos = mousePosition(ev),
+            gap = 0;
+            mousePos.x = parseInt(mousePos.x - centerPoint.x);
+            mousePos.y = parseInt(mousePos.y - centerPoint.y);
+            mousePos.angle = parseInt(self.getAngle(mousePos));
+            gap = mousePos.angle - mousePosOld.angle;
+            if (Math.abs(gap) < 100) {
+                angleSum += mousePos.angle - mousePosOld.angle;
+            } else if (gap > 0) {
+                angleSum += mousePos.angle - mousePosOld.angle - 360;
+            } else {
+                angleSum += mousePos.angle - mousePosOld.angle + 360;
+            }
+            
+            mousePosOld = mousePos;
+            element.cssProperty('transform','rotate('+angleSum+'deg)');
+            fn(angleSum);
+        },
+        mouseUp = function(ev){
+            ev = ev || window.event;
+            if(ev.button == 2 || ev.button == 3){
+                return;
+            }
+            key = false;
+            return;
+        };
 
-		element.addEventListener('mousedown', mouseDown, false);
-		element.addEventListener('mousemove', mouseMove, false);
-		document.addEventListener('mouseup', mouseUp, false);
-	},
+        element.addEventListener('mousedown', mouseDown, false);
+        element.addEventListener('mousemove', mouseMove, false);
+        document.addEventListener('mouseup', mouseUp, false);
+    },
 
-	//--------------------------------------------//
-	//                  模型区域                  //
-	//--------------------------------------------//
-	/*
-	 * note 计时器
-	 * conf: 见注释
-	 */
-	clock : function(conf){
-		if (!(this instanceof light.clock)){//强制使用new
-			return new light.clock(conf);
-		}
-		conf = conf === undefined ? {} : conf;
+    //--------------------------------------------//
+    //                  模型区域                  //
+    //--------------------------------------------//
+    /*
+     * note 计时器
+     * conf: 见注释
+     */
+    clock : function(conf){
+        if (!(this instanceof light.clock)){//强制使用new
+            return new light.clock(conf);
+        }
+        conf = conf === undefined ? {} : conf;
 
-		var self = this;
+        var self = this;
 
-		self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
-		self.loop = conf.loop || -1//-1为无限次循环   循环次数
-		self.destory = conf.destory || false;//次数用尽后自毁
-		self.start = new Date().getTime();//计时器开始时间 ms
+        self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
+        self.loop = conf.loop || -1//-1为无限次循环   循环次数
+        self.destory = conf.destory || false;//次数用尽后自毁
+        self.start = new Date().getTime();//计时器开始时间 ms
 
-		light.clockStack.push(self);
+        light.clockStack.push(self);
 
-		return self;
-	},
+        return self;
+    },
 
-	/*  
-	 * note 	精灵
-	 * conf 	见注释
+    /*  
+     * note     精灵
+     * conf     见注释
      * 若未初始化宽度,高度，则取图片高宽
      */
     sprite : function(conf){
@@ -478,12 +478,12 @@ window.light = {
 
         /*闪烁*/
         self.blinkStyle = conf.blinkStyle || null; // 闪烁属性，暂时只支持透明度
-		self.blinkSpeed = conf.blinkSpeed || null; // 闪烁速度
-		self.blinkCount = conf.blinkCount || null; // 闪烁次数
-		self.blinkBegin = conf.blinkBegin || null; // 起始的透明度
-		self.blinkEnd   = conf.blinkEnd || null; // 结束的透明度
-		self.blinkFlag   = conf.blinkFlag || null; // 标识  增加还是减少
-		self.blinkCallback = conf.callback || null; 
+        self.blinkSpeed = conf.blinkSpeed || null; // 闪烁速度
+        self.blinkCount = conf.blinkCount || null; // 闪烁次数
+        self.blinkBegin = conf.blinkBegin || null; // 起始的透明度
+        self.blinkEnd   = conf.blinkEnd || null; // 结束的透明度
+        self.blinkFlag   = conf.blinkFlag || null; // 标识  增加还是减少
+        self.blinkCallback = conf.callback || null; 
 
         /*改变大小*/
         self.oldWidth = conf.oldWidth || null;
@@ -508,145 +508,145 @@ window.light = {
     },
 
 
-	/*
-	 * note 水纹效果
-	 * conf 见注释， context2D, imageData必选
-	 */
-	waterModel : function(conf){
+    /*
+     * note 水纹效果
+     * conf 见注释， context2D, imageData必选
+     */
+    waterModel : function(conf){
 
-		if (!(this instanceof light.waterModel)){//强制使用new
-			return new light.waterModel(conf);
-		}
+        if (!(this instanceof light.waterModel)){//强制使用new
+            return new light.waterModel(conf);
+        }
 
-		conf = conf === undefined ? {} : conf;
+        conf = conf === undefined ? {} : conf;
 
-		var self = this;
-		self.width = conf.width || 500,
-		self.height = conf.height || 400,
-		self.evolving = conf.evolving || false,//是否继续扩散
-		self.damping = conf.damping || 0.98,//能量衰减
-		self.clipping = conf.clipping || 5,//最大幅度
-		self.evolveThreshold = conf.evolveThreshold || 0.02,//最小幅度
-		self.lightRefraction = conf.lightRefraction || 5.0,
-		self.lightReflection = conf.lightReflection || 0.01,
-		self.context2D = conf.context2D,
-		self.imgDataIn = conf.imageData,
-		self.pixelsIn = conf.imageData.data,
-		self.amplitudeMap1 = new Array(self.width+2),
-		self.amplitudeMap2 = new Array(self.width+2);
+        var self = this;
+        self.width = conf.width || 500,
+        self.height = conf.height || 400,
+        self.evolving = conf.evolving || false,//是否继续扩散
+        self.damping = conf.damping || 0.98,//能量衰减
+        self.clipping = conf.clipping || 5,//最大幅度
+        self.evolveThreshold = conf.evolveThreshold || 0.02,//最小幅度
+        self.lightRefraction = conf.lightRefraction || 5.0,
+        self.lightReflection = conf.lightReflection || 0.01,
+        self.context2D = conf.context2D,
+        self.imgDataIn = conf.imageData,
+        self.pixelsIn = conf.imageData.data,
+        self.amplitudeMap1 = new Array(self.width+2),
+        self.amplitudeMap2 = new Array(self.width+2);
 
-		for(var i = 0; i < self.width+2; i++){
-			self.amplitudeMap1[i] = new Array(self.height+2);
-			self.amplitudeMap2[i] = new Array(self.height+2);
+        for(var i = 0; i < self.width+2; i++){
+            self.amplitudeMap1[i] = new Array(self.height+2);
+            self.amplitudeMap2[i] = new Array(self.height+2);
 
-			for(var j = 0; j < self.height+2; j++){
-				self.amplitudeMap1[i][j] = 0.0;
-				self.amplitudeMap2[i][j] = 0.0;
-			}
-		}
+            for(var j = 0; j < self.height+2; j++){
+                self.amplitudeMap1[i][j] = 0.0;
+                self.amplitudeMap2[i][j] = 0.0;
+            }
+        }
 
-		self.pointWaterArray = [
-			[1.25,1.25,1.25,1.25,1.25,1.25,1.25],
-			[1.25,1.45,1.45,1.45,1.45,1.45,1.25],
-			[1.25,1.45,1.65,1.65,1.65,1.45,1.25],
-			[1.25,1.45,1.65,1.85,1.65,1.45,1.25],
-			[1.25,1.45,1.65,1.65,1.65,1.45,1.25],
-			[1.25,1.45,1.45,1.45,1.45,1.45,1.25],
-			[1.25,1.25,1.25,1.25,1.25,1.25,1.25],
-		];
-		self.touchWaterArray = [
-			[0.15,0.15,0.15],
-			[0.15,0.25,0.15],
-			[0.15,0.15,0.15],
-		];
-		self.rainWaterArray = [
-			[0.15,0.15,0.15,0.15,0.15],
-			[0.15,0.25,0.25,0.25,0.15],
-			[0.15,0.25,0.55,0.25,0.15],
-			[0.15,0.25,0.25,0.25,0.15],
-			[0.15,0.15,0.15,0.15,0.15],
-		];
+        self.pointWaterArray = [
+            [1.25,1.25,1.25,1.25,1.25,1.25,1.25],
+            [1.25,1.45,1.45,1.45,1.45,1.45,1.25],
+            [1.25,1.45,1.65,1.65,1.65,1.45,1.25],
+            [1.25,1.45,1.65,1.85,1.65,1.45,1.25],
+            [1.25,1.45,1.65,1.65,1.65,1.45,1.25],
+            [1.25,1.45,1.45,1.45,1.45,1.45,1.25],
+            [1.25,1.25,1.25,1.25,1.25,1.25,1.25],
+        ];
+        self.touchWaterArray = [
+            [0.15,0.15,0.15],
+            [0.15,0.25,0.15],
+            [0.15,0.15,0.15],
+        ];
+        self.rainWaterArray = [
+            [0.15,0.15,0.15,0.15,0.15],
+            [0.15,0.25,0.25,0.25,0.15],
+            [0.15,0.25,0.55,0.25,0.15],
+            [0.15,0.25,0.25,0.25,0.15],
+            [0.15,0.15,0.15,0.15,0.15],
+        ];
 
-		light.modelStack.push(self);
+        light.modelStack.push(self);
 
-		return self;
-	},
+        return self;
+    },
 
-	/*
-	 * note 下雪
-	 * conf 见注释， context2D必选
-	 */
-	snowModel : function(conf){
-		if (!(this instanceof light.snowModel)){//强制使用new
-			return new light.snowModel(conf);
-		}
+    /*
+     * note 下雪
+     * conf 见注释， context2D必选
+     */
+    snowModel : function(conf){
+        if (!(this instanceof light.snowModel)){//强制使用new
+            return new light.snowModel(conf);
+        }
 
-		var self = this;
-		self.width = conf.width || 500,
-		self.height = conf.height || 400,
-		self.bgColor = conf.bgColor || '#6B92B9',
-		self.context2D = conf.context2D,
-		self.flakeNum = conf.flakeNum || 50,			// 雪花数目
-		self.flakeArr = [],								// 雪花数组，各种属性
-		self.r = conf.r || 2,							// 半径最大值-1
-		self.opacityMax = conf.opacityMax || 0.9, 		// 透明度范围最大值
-		self.opacityMin = conf.opacityMin || 0.3,		// 透明度范围最小值
-		self.angle = 0.0,								// 三角函数控制移动
-		self.vk = conf.vk || 0.5,
-		self.windPower = conf.windPower || 1.0,
-		self.windDamp = conf.windDamp || 0.96, 			// 吹后阻尼
-		self.snowsCoverCanvas = conf.snowsCoverCanvas || null
-		self.snowsCoverData = conf.snowsCoverData || null,	// 积雪覆盖
-		self.other = null;
+        var self = this;
+        self.width = conf.width || 500,
+        self.height = conf.height || 400,
+        self.bgColor = conf.bgColor || '#6B92B9',
+        self.context2D = conf.context2D,
+        self.flakeNum = conf.flakeNum || 50,            // 雪花数目
+        self.flakeArr = [],                                // 雪花数组，各种属性
+        self.r = conf.r || 2,                            // 半径最大值-1
+        self.opacityMax = conf.opacityMax || 0.9,         // 透明度范围最大值
+        self.opacityMin = conf.opacityMin || 0.3,        // 透明度范围最小值
+        self.angle = 0.0,                                // 三角函数控制移动
+        self.vk = conf.vk || 0.5,
+        self.windPower = conf.windPower || 1.0,
+        self.windDamp = conf.windDamp || 0.96,             // 吹后阻尼
+        self.snowsCoverCanvas = conf.snowsCoverCanvas || null
+        self.snowsCoverData = conf.snowsCoverData || null,    // 积雪覆盖
+        self.other = null;
 
-		if (!self.snowsCoverData) {
-			self.snowsCoverData = self.snowsCoverCanvas.getImageData(0, 0, self.width, self.height);
-		}
+        if (!self.snowsCoverData) {
+            self.snowsCoverData = self.snowsCoverCanvas.getImageData(0, 0, self.width, self.height);
+        }
 
-		light.modelStack.push(self);
+        light.modelStack.push(self);
 
-		self.initFlakeArr();
-		self.draw();
-	},
+        self.initFlakeArr();
+        self.draw();
+    },
 
-	//--------------------------------------------//
-	//                  控制区域                  //
-	//--------------------------------------------//
+    //--------------------------------------------//
+    //                  控制区域                  //
+    //--------------------------------------------//
 
-	destoryIterm : function(stackList){
-		//生成了新的数组  与原来的地址不一样～
-		stackList = stackList.filter(function(element){
-			return !element.destory;//返回destory为false的元素
-		});
+    destoryIterm : function(stackList){
+        //生成了新的数组  与原来的地址不一样～
+        stackList = stackList.filter(function(element){
+            return !element.destory;//返回destory为false的元素
+        });
 
-		return stackList
-	},
+        return stackList
+    },
 
-	/*
-	 * note 运行model和clock
-	 */
+    /*
+     * note 运行model和clock
+     */
 
-	run : function(){
-		var self = light,
-		modelLength = null,
-		clockLength = null;
+    run : function(){
+        var self = light,
+        modelLength = null,
+        clockLength = null;
 
-		self.modelStack = self.destoryIterm(self.modelStack);
-		modelLength = self.modelStack.length;
+        self.modelStack = self.destoryIterm(self.modelStack);
+        modelLength = self.modelStack.length;
 
-		for(var i = 0; i < modelLength; i++){
-			self.modelStack[i].run();
-		}
+        for(var i = 0; i < modelLength; i++){
+            self.modelStack[i].run();
+        }
 
-		self.clockStack = self.destoryIterm(self.clockStack);
-		clockLength = self.clockStack.length;
+        self.clockStack = self.destoryIterm(self.clockStack);
+        clockLength = self.clockStack.length;
 
-		for(var i = 0; i < clockLength; i++){
-			self.clockStack[i].run();
-		}
+        for(var i = 0; i < clockLength; i++){
+            self.clockStack[i].run();
+        }
 
-		requestAnimFrame(self.run);
-	}
+        requestAnimFrame(self.run);
+    }
 }
 
 //----------------------------------------------//
@@ -712,7 +712,7 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
     self.resize(width, height, t, callback);
 }
 
-light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 fadeOut 1 fadeIn
+light.sprite.prototype.fade = function(time, flag, callback){/    ime ms flag -1 fadeOut 1 fadeIn
     var self = this;
 
     if(callback){
@@ -761,53 +761,53 @@ light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 f
 }
 
 /*
- * note 	闪烁
- * author 	Light
+ * note     闪烁
+ * author     Light
  */
 
 light.sprite.prototype.blink = function(conf){
-	var self = this;
+    var self = this;
 
-	if (conf) {
-		self.blinkStyle = conf.style || 'all'; // 闪烁属性，暂时只支持透明度
-		self.blinkSpeed = conf.speed || 1000; // 闪烁速度
-		self.blinkCount = conf.count || -1; // 闪烁次数
-		self.blinkBegin = conf.blinkBegin || 1; // 起始的透明度
-		self.blinkEnd   = conf.blinkEnd || 0; // 结束的透明度
-		self.blinkFlag   = conf.blinkFlag || -1; // 标识  增加还是减少
-		self.blinkCallback = conf.callback || function(){};
-	}
+    if (conf) {
+        self.blinkStyle = conf.style || 'all'; // 闪烁属性，暂时只支持透明度
+        self.blinkSpeed = conf.speed || 1000; // 闪烁速度
+        self.blinkCount = conf.count || -1; // 闪烁次数
+        self.blinkBegin = conf.blinkBegin || 1; // 起始的透明度
+        self.blinkEnd   = conf.blinkEnd || 0; // 结束的透明度
+        self.blinkFlag   = conf.blinkFlag || -1; // 标识  增加还是减少
+        self.blinkCallback = conf.callback || function(){};
+    }
 
-	if (self.blinkStyle === 'opacity' || self.blinkStyle === 'all') {
-		var changeOpacity = Math.abs(self.blinkBegin - self.blinkEnd);
+    if (self.blinkStyle === 'opacity' || self.blinkStyle === 'all') {
+        var changeOpacity = Math.abs(self.blinkBegin - self.blinkEnd);
 
-	    var now = new Date().getTime();
-	    
-	    self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
-	    
-	    if(self.opacity > self.blinkBegin){
-	        self.opacity = self.blinkBegin;
-	        self.blinkFlag = -1 * self.blinkFlag;
-	        self.blinkCount -= 0.5;
-	    }
+        var now = new Date().getTime();
+        
+        self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
+        
+        if(self.opacity > self.blinkBegin){
+            self.opacity = self.blinkBegin;
+            self.blinkFlag = -1 * self.blinkFlag;
+            self.blinkCount -= 0.5;
+        }
 
-	    if(self.opacity < self.blinkEnd){
-	        self.opacity = self.blinkEnd;
-	        self.blinkFlag = -1 * self.blinkFlag;
-	        self.blinkCount -= 0.5;
-	    }
+        if(self.opacity < self.blinkEnd){
+            self.opacity = self.blinkEnd;
+            self.blinkFlag = -1 * self.blinkFlag;
+            self.blinkCount -= 0.5;
+        }
 
-	    if (self.blinkCount === 0) {
-	    	self.blinkCallback.bind(self);
-	    	self.blinkCallback();
-	    }
-	}
+        if (self.blinkCount === 0) {
+            self.blinkCallback.bind(self);
+            self.blinkCallback();
+        }
+    }
 }
 
 light.sprite.prototype.resetTime = function(){
-	var self = this;
+    var self = this;
 
-	self.old = new Date().getTime();
+    self.old = new Date().getTime();
 }
 
 light.sprite.prototype.click = function(){//点击后发生的事件
@@ -968,13 +968,13 @@ light.sprite.prototype.createAnim = function(anim){
             var tempImg = new Image();
 
             tempImg.onload = function(){
-            	if (!self.width) {
-            		self.width = tempImg.width;
-            	}
+                if (!self.width) {
+                    self.width = tempImg.width;
+                }
 
-            	if (!self.height) {
-            		self.height = tempImg.height;
-            	}
+                if (!self.height) {
+                    self.height = tempImg.height;
+                }
             }
 
             tempImg.src = anim.frames[i];
@@ -1054,130 +1054,130 @@ light.sprite.prototype.run = function(name){
 //振幅计算   水纹扩散
 light.waterModel.prototype.amplitude = function(){
 
-	var self = this,
-	swapMap = null,
-	val = null,
-	x = 0,
-	y = 0;
+    var self = this,
+    swapMap = null,
+    val = null,
+    x = 0,
+    y = 0;
 
-	if (!self.evolving) {
-		return;
-	}
+    if (!self.evolving) {
+        return;
+    }
 
-	self.evolving  = false;
+    self.evolving  = false;
 
-	for (x = 1; x <= self.width; x++) {
-		for (y = 1; y <= self.height; y++) {
+    for (x = 1; x <= self.width; x++) {
+        for (y = 1; y <= self.height; y++) {
 
-			// Handle borders correctly
-			val = self.amplitudeMap1[x - 1][y] + self.amplitudeMap1[x + 1][y] + self.amplitudeMap1[x][y - 1] + self.amplitudeMap1[x][y + 1];
+            // Handle borders correctly
+            val = self.amplitudeMap1[x - 1][y] + self.amplitudeMap1[x + 1][y] + self.amplitudeMap1[x][y - 1] + self.amplitudeMap1[x][y + 1];
 
-			// Damping
-			val = ((val / 2.0) - self.amplitudeMap2[x][y]) * self.damping;
-			
-			// Clipping prevention
-			if (Math.abs(val) <= self.evolveThreshold){
-				self.amplitudeMap2[x][y] = 0.0;
-				continue;
-			} else if (val>self.clipping) {
-				val = self.clipping;
-			} else if(val<-self.clipping) {
-				val = -self.clipping;
-			}
-			
-			// Evolve check
-			self.evolving = true;
-			
-			self.amplitudeMap2[x][y] = val;
-		}
-	}
+            // Damping
+            val = ((val / 2.0) - self.amplitudeMap2[x][y]) * self.damping;
+            
+            // Clipping prevention
+            if (Math.abs(val) <= self.evolveThreshold){
+                self.amplitudeMap2[x][y] = 0.0;
+                continue;
+            } else if (val>self.clipping) {
+                val = self.clipping;
+            } else if(val<-self.clipping) {
+                val = -self.clipping;
+            }
+            
+            // Evolve check
+            self.evolving = true;
+            
+            self.amplitudeMap2[x][y] = val;
+        }
+    }
 
-	// Swap buffer references
-	swapMap 	= self.amplitudeMap1;
-	self.amplitudeMap1 	= self.amplitudeMap2;
-	self.amplitudeMap2 	= swapMap;
+    // Swap buffer references
+    swapMap     = self.amplitudeMap1;
+    self.amplitudeMap1     = self.amplitudeMap2;
+    self.amplitudeMap2     = swapMap;
 
 }
 
 //渲染整个水池
 light.waterModel.prototype.drawWaterPool = function(){
-	var self = this;
+    var self = this;
 
-	if (!self.evolving) {
-		return;
-	}
-	var imgDataOut = self.context2D.getImageData(0, 0, self.width, self.height),
-	pixelsOut = imgDataOut.data,
-	pixel = null,
-	x = 0,
-	y = 0,
-	strength = 0,
-	refraction = 0,
-	xPix = 0,
-	yPix = 0,
-	n = pixelsOut.length;
+    if (!self.evolving) {
+        return;
+    }
+    var imgDataOut = self.context2D.getImageData(0, 0, self.width, self.height),
+    pixelsOut = imgDataOut.data,
+    pixel = null,
+    x = 0,
+    y = 0,
+    strength = 0,
+    refraction = 0,
+    xPix = 0,
+    yPix = 0,
+    n = pixelsOut.length;
 
-	for (var i = 0; i < n; i += 4) {
-		pixel = i/4;
-		x = pixel % self.width;
-		y = (pixel-x) / self.width;
-		
-		strength = self.amplitudeMap1[x+1][y+1];
-		if (strength === 0) {
-			continue;
-		}
-		
-		// Refraction of light in water
-		refraction = Math.round(strength * self.lightRefraction);
-		
-		if (x <= self.width/2 && y <= self.width/2) {
-			xPix = x - refraction;
-			yPix = y - refraction;
-		} else if(x >= self.width/2 && y <= self.width/2){
-			xPix = x + refraction;
-			yPix = y - refraction;
-		} else if(x >= self.width/2 && y >= self.width/2){
-			xPix = x + refraction;
-			yPix = y + refraction;
-		} else if(x <= self.width/2 && y >= self.width/2){
-			xPix = x - refraction;
-			yPix = y + refraction;
-		}
-		
-		if(xPix < 0) xPix = 0;
-		if(yPix < 0) yPix = 0;					
-		if(xPix > self.width-1) xPix = self.width-1;
-		if(yPix > self.height-1) yPix = self.height-1;			
-		
-		
-		
-		// Get the pixel from input
-		var iPix = ((yPix * self.width) + xPix) * 4;
-		var red 	= self.pixelsIn[iPix  ];
-		var green 	= self.pixelsIn[iPix+1];
-		var blue 	= self.pixelsIn[iPix+2];
-		
-		
-		// Set the pixel to output
-		strength *= self.lightReflection;
-		strength += 1.0;
+    for (var i = 0; i < n; i += 4) {
+        pixel = i/4;
+        x = pixel % self.width;
+        y = (pixel-x) / self.width;
+        
+        strength = self.amplitudeMap1[x+1][y+1];
+        if (strength === 0) {
+            continue;
+        }
+        
+        // Refraction of light in water
+        refraction = Math.round(strength * self.lightRefraction);
+        
+        if (x <= self.width/2 && y <= self.width/2) {
+            xPix = x - refraction;
+            yPix = y - refraction;
+        } else if(x >= self.width/2 && y <= self.width/2){
+            xPix = x + refraction;
+            yPix = y - refraction;
+        } else if(x >= self.width/2 && y >= self.width/2){
+            xPix = x + refraction;
+            yPix = y + refraction;
+        } else if(x <= self.width/2 && y >= self.width/2){
+            xPix = x - refraction;
+            yPix = y + refraction;
+        }
+        
+        if(xPix < 0) xPix = 0;
+        if(yPix < 0) yPix = 0;                    
+        if(xPix > self.width-1) xPix = self.width-1;
+        if(yPix > self.height-1) yPix = self.height-1;            
+        
+        
+        
+        // Get the pixel from input
+        var iPix = ((yPix * self.width) + xPix) * 4;
+        var red     = self.pixelsIn[iPix  ];
+        var green     = self.pixelsIn[iPix+1];
+        var blue     = self.pixelsIn[iPix+2];
+        
+        
+        // Set the pixel to output
+        strength *= self.lightReflection;
+        strength += 1.0;
 
-		pixelsOut[i  ] = red *= strength;
-		pixelsOut[i+1] = green *= strength;
-		pixelsOut[i+2] = blue *= strength;
-		//pixelsOut[i+3] = 255; 
-	}
+        pixelsOut[i  ] = red *= strength;
+        pixelsOut[i+1] = green *= strength;
+        pixelsOut[i+2] = blue *= strength;
+        //pixelsOut[i+3] = 255; 
+    }
 
-	self.context2D.putImageData(imgDataOut, 0,0);
+    self.context2D.putImageData(imgDataOut, 0,0);
 
 }
 
 //
 light.waterModel.prototype.run = function(){
-	var self = this;
-	
-	self.amplitude();
-	self.drawWaterPool();
+    var self = this;
+    
+    self.amplitude();
+    self.drawWaterPool();
 }
 
 /*
@@ -1186,39 +1186,39 @@ light.waterModel.prototype.run = function(){
  */
 light.waterModel.prototype.touchWater = function(x,y,touch){
 
-	var self = this,
-	arrayTouch = self[touch],
-	lx = arrayTouch.length,
-	ly = arrayTouch[0].length;
+    var self = this,
+    arrayTouch = self[touch],
+    lx = arrayTouch.length,
+    ly = arrayTouch[0].length;
 
-	self.evolving = true;
+    self.evolving = true;
 
-	for(var i = 0; i < lx; i++){
-		for(var j = 0; j < ly; j++){
-			if (x+i >= 0 && y+j >=0  && x+i < self.width && y+j < self.height) {
-				self.amplitudeMap1[x+1+i][y+1+j] -= arrayTouch[i][j];
-			}
-		}
-	}
+    for(var i = 0; i < lx; i++){
+        for(var j = 0; j < ly; j++){
+            if (x+i >= 0 && y+j >=0  && x+i < self.width && y+j < self.height) {
+                self.amplitudeMap1[x+1+i][y+1+j] -= arrayTouch[i][j];
+            }
+        }
+    }
 }
 
 light.waterModel.prototype.rain = function(){
-	var self = this,
-	x = Math.round(Math.random()*self.width),
-	y = Math.round(Math.random()*30+10),
-	x2 = Math.round(Math.random()*self.width),
-	y2 = Math.round(Math.random()*30+10),
-	swich = Math.random();
+    var self = this,
+    x = Math.round(Math.random()*self.width),
+    y = Math.round(Math.random()*30+10),
+    x2 = Math.round(Math.random()*self.width),
+    y2 = Math.round(Math.random()*30+10),
+    swich = Math.random();
 
-	if (swich < 0.3) {
-		return;
-	}
+    if (swich < 0.3) {
+        return;
+    }
 
-	if (swich > 0.7) {
-		self.touchWater(x2,y2,'rainWaterArray');
-	}
+    if (swich > 0.7) {
+        self.touchWater(x2,y2,'rainWaterArray');
+    }
 
-	self.touchWater(x,y,'rainWaterArray');
+    self.touchWater(x,y,'rainWaterArray');
 }
 
 //--------------------------------------------//
@@ -1226,106 +1226,106 @@ light.waterModel.prototype.rain = function(){
 //--------------------------------------------//
 // 初始化雪花数组
 light.snowModel.prototype.initFlakeArr = function(){
-	var self = this;
-	for(var i = 0; i < self.flakeNum; i++){
-		self.flakeArr.push(self.initFlake());
-	}
+    var self = this;
+    for(var i = 0; i < self.flakeNum; i++){
+        self.flakeArr.push(self.initFlake());
+    }
 }
 // 初始化雪花
 light.snowModel.prototype.initFlake = function(sf){
-	var self = this;
+    var self = this;
 
-	return {
-		x: Math.random()*self.width,
-		y: Math.random()*self.height,
-		r: Math.random()*self.r + 1,
-		color: 'rgba(255, 255, 255, '+(Math.random()*(self.opacityMax - self.opacityMin) + self.opacityMin)+')',
-		density: Math.random()*self.flakeNum,
-		windX : 0,
-		windY : 0,
-		angle : sf && sf.angle || Math.random()*Math.PI*2
-	}
+    return {
+        x: Math.random()*self.width,
+        y: Math.random()*self.height,
+        r: Math.random()*self.r + 1,
+        color: 'rgba(255, 255, 255, '+(Math.random()*(self.opacityMax - self.opacityMin) + self.opacityMin)+')',
+        density: Math.random()*self.flakeNum,
+        windX : 0,
+        windY : 0,
+        angle : sf && sf.angle || Math.random()*Math.PI*2
+    }
 }
 
 light.snowModel.prototype.draw = function(){
-	var self = this;
+    var self = this;
 
-	self.context2D.clearRect(0, 0, self.width, self.height);
-	self.context2D.fillStyle = self.bgColor;
-	self.context2D.fillRect(0, 0, self.width, self.height);
+    self.context2D.clearRect(0, 0, self.width, self.height);
+    self.context2D.fillStyle = self.bgColor;
+    self.context2D.fillRect(0, 0, self.width, self.height);
 
-	for(var i = 0; i < self.flakeNum; i++){
-		var sf = self.flakeArr[i];
-		self.context2D.beginPath();
-		self.context2D.fillStyle = sf.color;
-		self.context2D.moveTo(sf.x, sf.y);
-		self.context2D.arc(sf.x, sf.y, sf.r, 0, Math.PI*2, true);
-		self.context2D.fill();
-	}
-	self.context2D.fillStyle = '#000';
-	self.context2D.fillRect(wid/2 - 100,hig/2 - 60,200,5);
+    for(var i = 0; i < self.flakeNum; i++){
+        var sf = self.flakeArr[i];
+        self.context2D.beginPath();
+        self.context2D.fillStyle = sf.color;
+        self.context2D.moveTo(sf.x, sf.y);
+        self.context2D.arc(sf.x, sf.y, sf.r, 0, Math.PI*2, true);
+        self.context2D.fill();
+    }
+    self.context2D.fillStyle = '#000';
+    self.context2D.fillRect(wid/2 - 100,hig/2 - 60,200,5);
 }
 // 雪花飘落
 light.snowModel.prototype.snowDown = function(){
-	var self = this,
-	windArea = [];
+    var self = this,
+    windArea = [];
 
-	//
-	for(var i = 0; i < self.windArea.length; i++){
-		if (self.windArea[i].windNum <= 0) {
-			self.windArea.splice(i,0);
-		}else{
-			self.windArea[i].windNum --;
-			windArea.push(self.windArea[i]);
-		}						
-	}
+    //
+    for(var i = 0; i < self.windArea.length; i++){
+        if (self.windArea[i].windNum <= 0) {
+            self.windArea.splice(i,0);
+        }else{
+            self.windArea[i].windNum --;
+            windArea.push(self.windArea[i]);
+        }                        
+    }
 
-	for(var i = 0; i < self.flakeNum; i++){
-		var sf = self.flakeArr[i];
+    for(var i = 0; i < self.flakeNum; i++){
+        var sf = self.flakeArr[i];
 
-		self.windEffect(windArea, sf);
+        self.windEffect(windArea, sf);
 
-		sf.angle += 0.01;
-		sf.y += 0.8*(Math.cos(sf.angle + sf.density) + 1 + sf.r/2)*self.vk + sf.windY;
-		sf.x += 0.3*Math.cos(sf.angle)*2*self.vk + sf.windX;
+        sf.angle += 0.01;
+        sf.y += 0.8*(Math.cos(sf.angle + sf.density) + 1 + sf.r/2)*self.vk + sf.windY;
+        sf.x += 0.3*Math.cos(sf.angle)*2*self.vk + sf.windX;
 
-		self.snowsCover(sf);
+        self.snowsCover(sf);
 
-		if (sf.windX > 0.01) {
-			//sf.windX -= 0.01;
-			sf.windX *= self.windDamp;
-		} else if(sf.windX < -0.01){
-			//sf.windX += 0.01;
-			sf.windX *= self.windDamp;
-		} else{
-			sf.windX = 0;
-		}
+        if (sf.windX > 0.01) {
+            //sf.windX -= 0.01;
+            sf.windX *= self.windDamp;
+        } else if(sf.windX < -0.01){
+            //sf.windX += 0.01;
+            sf.windX *= self.windDamp;
+        } else{
+            sf.windX = 0;
+        }
 
-		if (sf.windY > 0.01) {
-			//sf.windY -= 0.01;
-			sf.windY *= self.windDamp;
-		} else if(sf.windY < -0.01){
-			//sf.windY += 0.01;
-			sf.windY *= self.windDamp;
-		} else{
-			sf.windY = 0;
-		}
+        if (sf.windY > 0.01) {
+            //sf.windY -= 0.01;
+            sf.windY *= self.windDamp;
+        } else if(sf.windY < -0.01){
+            //sf.windY += 0.01;
+            sf.windY *= self.windDamp;
+        } else{
+            sf.windY = 0;
+        }
 
-		if (sf.y > self.height + 2*self.r || sf.x > self.width + 2*self.r || sf.x < - 2*self.r) {
-			if (i % 5 > 0) {
-				sf = self.flakeArr[i] = self.initFlake(sf);
-				sf.y = -2*self.r - 2;
-			} else{
-				if ( (sf.angle + sf.density) % (2*Math.PI) < Math.PI) {
-					sf = self.flakeArr[i] = self.initFlake(sf);
-					sf.x = -2*self.r;
-				} else{
-					sf = self.flakeArr[i] = self.initFlake(sf);
-					sf.x = self.width + 2*self.r;
-				}
-			}
-		}
-	}
+        if (sf.y > self.height + 2*self.r || sf.x > self.width + 2*self.r || sf.x < - 2*self.r) {
+            if (i % 5 > 0) {
+                sf = self.flakeArr[i] = self.initFlake(sf);
+                sf.y = -2*self.r - 2;
+            } else{
+                if ( (sf.angle + sf.density) % (2*Math.PI) < Math.PI) {
+                    sf = self.flakeArr[i] = self.initFlake(sf);
+                    sf.x = -2*self.r;
+                } else{
+                    sf = self.flakeArr[i] = self.initFlake(sf);
+                    sf.x = self.width + 2*self.r;
+                }
+            }
+        }
+    }
 }
 
 /*
@@ -1336,74 +1336,74 @@ light.snowModel.prototype.snowDown = function(){
 light.snowModel.prototype.windArea = [];
 
 light.snowModel.prototype.addWind = function(p1, p2, p3, p4){
-	var self = this,
-	l1 = p1.A ? p1 : light.getLineFunction(p1,p2),
-	l2 = p2.A ? p2 : light.getLineFunction(p2,p3),
-	l3 = p3.A ? p3 : light.getLineFunction(p3,p4),
-	l4 = p4.A ? p4 : light.getLineFunction(p4,p1),
-	dir = {},
-	pp1 = light.getLinePoint(l1, l4),
-	pp2 = light.getLinePoint(l1, l2);
+    var self = this,
+    l1 = p1.A ? p1 : light.getLineFunction(p1,p2),
+    l2 = p2.A ? p2 : light.getLineFunction(p2,p3),
+    l3 = p3.A ? p3 : light.getLineFunction(p3,p4),
+    l4 = p4.A ? p4 : light.getLineFunction(p4,p1),
+    dir = {},
+    pp1 = light.getLinePoint(l1, l4),
+    pp2 = light.getLinePoint(l1, l2);
 
-	if (pp1 === null) {
-		console.log(l1, l4, p1, p2, p4);
-	}
-	// 逆向
-	if ( pp1.x < pp2.x ) {
-		dir.x = 1;
-	} else{
-		dir.x = -1;
-	}
+    if (pp1 === null) {
+        console.log(l1, l4, p1, p2, p4);
+    }
+    // 逆向
+    if ( pp1.x < pp2.x ) {
+        dir.x = 1;
+    } else{
+        dir.x = -1;
+    }
 
-	if ( pp1.y < pp2.y ) {
-		dir.y = 1;
-	} else{
-		dir.y = -1;
-	}
+    if ( pp1.y < pp2.y ) {
+        dir.y = 1;
+    } else{
+        dir.y = -1;
+    }
 
-	self.windArea.push({
-		'l1' : l1,
-		'l2' : l2,
-		'l3' : l3,
-		'l4' : l4,
-		'dir' : dir,
-		'A2': Math.abs(l1.A)/Math.sqrt(1+l1.A*l1.A),
-		'B2': 1/Math.sqrt(1+l1.A*l1.A),
-		'windNum' : 5
-	});
+    self.windArea.push({
+        'l1' : l1,
+        'l2' : l2,
+        'l3' : l3,
+        'l4' : l4,
+        'dir' : dir,
+        'A2': Math.abs(l1.A)/Math.sqrt(1+l1.A*l1.A),
+        'B2': 1/Math.sqrt(1+l1.A*l1.A),
+        'windNum' : 5
+    });
 }
 
 light.snowModel.prototype.windEffect = function(windArea, p){
-	var self = this,
-	length = windArea.length,
-	sum = 0;
+    var self = this,
+    length = windArea.length,
+    sum = 0;
 
-	for(var i = 0; i < length; i++){
-		if (light.inRectangle(undefined, p, windArea[i])) {
-			p.windX += self.windPower * windArea[i].B2 * windArea[i].dir.x / p.r;
-			p.windY += self.windPower * windArea[i].A2 * windArea[i].dir.y / p.r;
-		}
-	}
+    for(var i = 0; i < length; i++){
+        if (light.inRectangle(undefined, p, windArea[i])) {
+            p.windX += self.windPower * windArea[i].B2 * windArea[i].dir.x / p.r;
+            p.windY += self.windPower * windArea[i].A2 * windArea[i].dir.y / p.r;
+        }
+    }
 }
 
 light.snowModel.prototype.run = function(){
-	var self = this;
+    var self = this;
 
-	self.snowDown();
-	self.draw();
+    self.snowDown();
+    self.draw();
 }
 
 light.snowModel.prototype.snowsCover = function(sf){
-	var self = this;
+    var self = this;
 
-	if (self.snowsCoverData === null) {
-		return;
-	}
+    if (self.snowsCoverData === null) {
+        return;
+    }
 
-	var px = light.getPixel(self.snowsCoverData, sf.x, sf.y + sf.r);
-	if (px.r === 0 && px.g === 0 && px.b === 0) {
-		sf.y = self.height+200;
-	}
+    var px = light.getPixel(self.snowsCoverData, sf.x, sf.y + sf.r);
+    if (px.r === 0 && px.g === 0 && px.b === 0) {
+        sf.y = self.height+200;
+    }
 }
 
 //----------------------------------------------//
@@ -1411,48 +1411,48 @@ light.snowModel.prototype.snowsCover = function(sf){
 //----------------------------------------------//
 
 light.clock.prototype.doSomething = function(){
-	//等待用户自定义
+    //等待用户自定义
 }
 
 light.clock.prototype.run = function(){
-	var self = this;
-	if(self.loop === 0){
-		self.destory = true;
-		return;
-	}
+    var self = this;
+    if(self.loop === 0){
+        self.destory = true;
+        return;
+    }
 
-	var now = new Date().getTime();
-	if(now - self.start >= self.gap){
-		self.loop--;
-		self.start = now;
-		self.doSomething();
-	}
+    var now = new Date().getTime();
+    if(now - self.start >= self.gap){
+        self.loop--;
+        self.start = now;
+        self.doSomething();
+    }
 }
 
 /*获取鼠标位置*/
 function mousePosition(ev){ 
-	if(ev.pageX || ev.pageY){ 
-		return {x:ev.pageX, y:ev.pageY}; 
-	} 
-	return {
-		x:ev.clientX + document.body.scrollLeft - document.body.clientLeft, 
-		y:ev.clientY + document.body.scrollTop - document.body.clientTop 
-	}; 
+    if(ev.pageX || ev.pageY){ 
+        return {x:ev.pageX, y:ev.pageY}; 
+    } 
+    return {
+        x:ev.clientX + document.body.scrollLeft - document.body.clientLeft, 
+        y:ev.clientY + document.body.scrollTop - document.body.clientTop 
+    }; 
 }
 
 /*获取点击位置*/
 function touchPosition(ev){ 
-	if (ev.touches.length > 0) {
-		return {
-	        x : ev.touches[0].pageX, 
-	        y : ev.touches[0].pageY
-	    }; 
-	} else{
-		return {
-	        x : ev.changedTouches[0].pageX, 
-	        y : ev.changedTouches[0].pageY
-	    }; 
-	}
+    if (ev.touches.length > 0) {
+        return {
+            x : ev.touches[0].pageX, 
+            y : ev.touches[0].pageY
+        }; 
+    } else{
+        return {
+            x : ev.changedTouches[0].pageX, 
+            y : ev.changedTouches[0].pageY
+        }; 
+    }
     
 }
 
