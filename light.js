@@ -141,6 +141,10 @@ window.light = {
 	//--------------------------------------------//
 	//                  数学区域                  //
 	//--------------------------------------------//
+	// 取范围内随机数
+    randomRange : function(begin, end){
+        return Math.random()*(end - begin) + begin;
+    },
 	/*
 	 * note 	获取向量与x+方向的夹角
 	 * author 	Light
@@ -444,8 +448,9 @@ window.light = {
         var self = this;
 
         self.context2D = conf.context2D;
-        self.name = conf.name || "sprite";
-        self.src  = conf.src || "";
+        self.frame = conf.frame || [0]; // 处于第几个页面显示,0为都显示
+        self.name = conf.name || 'sprite';
+        self.src  = conf.src || '';
         self.x = conf.x || 0;
         self.y = conf.y || 0;
         self.width = conf.width || 0;
@@ -471,6 +476,15 @@ window.light = {
         self.fadeFlag = conf.fadeFlag || null;
         self.fadeCallback = conf.fadeCallback || null;
 
+        /*闪烁*/
+        self.blinkStyle = conf.blinkStyle || null; // 闪烁属性，暂时只支持透明度
+		self.blinkSpeed = conf.blinkSpeed || null; // 闪烁速度
+		self.blinkCount = conf.blinkCount || null; // 闪烁次数
+		self.blinkBegin = conf.blinkBegin || null; // 起始的透明度
+		self.blinkEnd   = conf.blinkEnd || null; // 结束的透明度
+		self.blinkFlag   = conf.blinkFlag || null; // 标识  增加还是减少
+		self.blinkCallback = conf.callback || null; 
+
         /*改变大小*/
         self.oldWidth = conf.oldWidth || null;
         self.oldHeight = conf.oldHeight || null;
@@ -484,7 +498,7 @@ window.light = {
         self.rotateCenterY = conf.rotateCenterY || null;
 
         self.animations = [];
-        self.curAnimation = "Default";//当前播放的用户名
+        self.curAnimation = 'Default';//当前播放的用户名
         self.curFrame = 0;//当前显示的图片序号
         self.frameStart = new Date().getTime();//一帧动画开始的时间（结束后刷新）
         self.old = self.frameStart;//移动前的时间
@@ -679,7 +693,7 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
     self.moveTo_x = x;
     self.moveTo_y = y;
     if(movet){
-        self.v = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))/movet;
+        self.v = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))*1000/movet;
     }
     if(x == self.x){
         y > self.y ? self.angle = Math.PI/2 : self.angle = Math.PI*3/2;
@@ -693,7 +707,8 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
     if(x < self.x){
         self.angle = self.angle+Math.PI;
     }
-    var t = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))/self.v;
+    var t = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))*1000/self.v;
+
     self.resize(width, height, t, callback);
 }
 
@@ -714,6 +729,8 @@ light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 f
         return;
     }
 
+    self.blinkStyle = null;
+
     if(self.changeOpacity == null){
         if(self.fadeFlag == -1)
             self.changeOpacity = Math.abs(self.opacity - 0);
@@ -721,7 +738,6 @@ light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 f
             self.changeOpacity = Math.abs(self.opacity - 1);
     }
     var now = new Date().getTime();
-    
     self.opacity = self.opacity + self.fadeFlag*(self.changeOpacity*(now - self.old)/self.fadeTime);
     if(self.opacity > 1){
         self.opacity = 1;
@@ -742,6 +758,56 @@ light.sprite.prototype.fade = function(time, flag, callback){//time ms flag -1 f
         self.fadeCallback = null;
         return;
     }
+}
+
+/*
+ * note 	闪烁
+ * author 	Light
+ */
+
+light.sprite.prototype.blink = function(conf){
+	var self = this;
+
+	if (conf) {
+		self.blinkStyle = conf.style || 'all'; // 闪烁属性，暂时只支持透明度
+		self.blinkSpeed = conf.speed || 1000; // 闪烁速度
+		self.blinkCount = conf.count || -1; // 闪烁次数
+		self.blinkBegin = conf.blinkBegin || 1; // 起始的透明度
+		self.blinkEnd   = conf.blinkEnd || 0; // 结束的透明度
+		self.blinkFlag   = conf.blinkFlag || -1; // 标识  增加还是减少
+		self.blinkCallback = conf.callback || function(){};
+	}
+
+	if (self.blinkStyle === 'opacity' || self.blinkStyle === 'all') {
+		var changeOpacity = Math.abs(self.blinkBegin - self.blinkEnd);
+
+	    var now = new Date().getTime();
+	    
+	    self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
+	    
+	    if(self.opacity > self.blinkBegin){
+	        self.opacity = self.blinkBegin;
+	        self.blinkFlag = -1 * self.blinkFlag;
+	        self.blinkCount -= 0.5;
+	    }
+
+	    if(self.opacity < self.blinkEnd){
+	        self.opacity = self.blinkEnd;
+	        self.blinkFlag = -1 * self.blinkFlag;
+	        self.blinkCount -= 0.5;
+	    }
+
+	    if (self.blinkCount === 0) {
+	    	self.blinkCallback.bind(self);
+	    	self.blinkCallback();
+	    }
+	}
+}
+
+light.sprite.prototype.resetTime = function(){
+	var self = this;
+
+	self.old = new Date().getTime();
 }
 
 light.sprite.prototype.click = function(){//点击后发生的事件
@@ -790,9 +856,11 @@ light.sprite.prototype.resize = function(width, height, time, callback){
     if((!self.changeTime) && (!self.changeHeight) && (!self.changeWidth)){
         return;
     }
+
     var now = new Date().getTime();
-    self.width = self.width + (self.changeWidth*1000/self.changeTime*(now - self.old));
-    self.height = self.height + (self.changeHeight*1000/self.changeTime*(now - self.old));
+
+    self.width = self.width + (self.changeWidth/self.changeTime*(now - self.old));
+    self.height = self.height + (self.changeHeight/self.changeTime*(now - self.old));
 
     if( (Math.abs(self.width - self.oldWidth) > Math.abs(self.changeWidth)) || (Math.abs(self.height - self.oldHeight) > Math.abs(self.changeHeight))){
         self.oldWidth = null;
@@ -924,6 +992,8 @@ light.sprite.prototype.createAnim = function(anim){
     else{
         self.animations.push(animobj);//对象压入数组
     }
+
+    return self;
 }
 
 light.sprite.prototype.getanimByName = function(name){
@@ -951,6 +1021,7 @@ light.sprite.prototype.runAnimation = function(anim){
     self.isDestination();
     self.isRotateToAngle();
     self.fade();
+    self.blink();
     self.resize();
     self.rotate = self.rotate + self.w*(now - self.old)/1000;
     if (typeFrame === 'function') {
@@ -1367,6 +1438,22 @@ function mousePosition(ev){
 		x:ev.clientX + document.body.scrollLeft - document.body.clientLeft, 
 		y:ev.clientY + document.body.scrollTop - document.body.clientTop 
 	}; 
+}
+
+/*获取点击位置*/
+function touchPosition(ev){ 
+	if (ev.touches.length > 0) {
+		return {
+	        x : ev.touches[0].pageX, 
+	        y : ev.touches[0].pageY
+	    }; 
+	} else{
+		return {
+	        x : ev.changedTouches[0].pageX, 
+	        y : ev.changedTouches[0].pageY
+	    }; 
+	}
+    
 }
 
 
