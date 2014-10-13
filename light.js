@@ -712,7 +712,7 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
     self.resize(width, height, t, callback);
 }
 
-light.sprite.prototype.fade = function(time, flag, callback){/    ime ms flag -1 fadeOut 1 fadeIn
+light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -1 fadeOut 1 fadeIn
     var self = this;
 
     if(callback){
