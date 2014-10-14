@@ -4,6 +4,10 @@ window.light = {
     modelStack : [],
     // new后的clock
     clockStack : [],
+    // 图层
+    layer : [],
+    // sprite 数组，new之后全部保存在此处
+    spriteList : [],
                 
     isObject : function(obj){
         return obj === Object(obj);
@@ -448,7 +452,7 @@ window.light = {
         var self = this;
 
         self.context2D = conf.context2D;
-        self.frame = conf.frame || [0]; // 处于第几个页面显示,0为都显示
+        self.group = conf.group || [0]; // 处于第几个页面显示,0为都显示
         self.name = conf.name || 'sprite';
         self.src  = conf.src || '';
         self.x = conf.x || 0;
@@ -505,6 +509,8 @@ window.light = {
 
         self.destoryOutside = false;
         self.destory = false;
+
+        light.spriteList.push(self);
     },
 
 
@@ -622,6 +628,57 @@ window.light = {
         return stackList
     },
 
+    destoryItermInArr : function(){
+        var self = this,
+        layerLength = self.layer.length,
+        spriteLength = self.spriteList;
+
+        for(var i = 0; i < layerLength; i++){
+            self.layer[i] = self.destoryIterm(self.layer[i]);
+        }
+
+        self.spriteList = self.destoryIterm(self.spriteList);
+    },
+
+    groupDo : function(conf){
+        var self = this,
+        spriteLength = self.spriteList.length,
+        groupNumArr = conf.groupNumArr || [0], // 数组传递 表明操作的是哪个数组
+        groupFn = conf.groupFn, // 选定goup各元素执行的函数
+        groupKey = conf.groupKey || false, // false 为正选，true为反选
+        newGroup = [], // 选出来的数组元素
+        groupNumArrLength = groupNumArr.length,
+        newGroupLength = 0,
+        key = null;
+
+        for(var i = 0; i < spriteLength; i++){
+            key = false;
+            for(var j = 0; j < groupNumArrLength; j++){
+                // 如果选定的是这个组
+                if (!groupKey && self.spriteList[i].group.indexOf(groupNumArr[j]) !== -1) {
+                    newGroup.push(self.spriteList[i]);
+                    break;
+                } else if(groupKey && self.spriteList[i].group.indexOf(groupNumArr[j]) !== -1){
+                    key = true;
+                    break;
+                }
+            }
+            if (key === false) {
+                newGroup.push(self.spriteList[i]);
+            }
+        }
+
+        newGroupLength = newGroup.length;
+
+        if (groupFn) {
+            for(var i = 0; i < newGroupLength; i++){
+                groupFn.call(newGroup[i]);
+            }
+        }
+
+        return newGroup;
+    },
+
     /*
      * note 运行model和clock
      */
@@ -647,6 +704,22 @@ window.light = {
 
         requestAnimFrame(self.run);
     }
+}
+
+// 将元素粘贴到图层数组与精灵数组中
+// 此处拓展了所有数组元素，稍后修改
+light.layer.constructor.prototype.pushDestoryEle = function(element){
+    var self = this;
+
+    if (self.indexOf(element) === -1) {
+        self.push(element);
+    }
+
+    if (light.spriteList.indexOf(element) === -1) {
+        light.spriteList.push(element);
+    }
+
+    return element;
 }
 
 //----------------------------------------------//
@@ -685,6 +758,43 @@ light.sprite.prototype.draw = function(_img, x, y, img_width, img_height, rotate
         'center_x' : self.rotateCenterX,
         'center_y' : self.rotateCenterY
     });    
+}
+
+// 绘制圆角矩形
+// 以中心为原点
+light.sprite.prototype.rRectangle = function(conf){
+    var self = this,
+    ctx = self.context2D,
+    r = conf.r || 0,
+    x = conf.x || 0,
+    y = conf.y || 0,
+    width = conf.width || self.width,
+    height = conf.height || self.height;
+
+    if (width === 0 || height === 0) {
+        console.log('width: ' + width, 'height: ' + height);
+        return;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-width/2 + x,  height/2 + y - r);
+    ctx.lineTo(-width/2 + x, -height/2 + y + r);
+
+    ctx.arcTo (-width/2 + x, -height/2 + y, -width/2 + x + r, -height/2 + y, r);
+    ctx.lineTo( width/2 + x - r, -height/2 + y);
+
+    ctx.arcTo ( width/2 + x, -height/2 + y,  width/2 + x, -height/2 + y + r, r);
+    ctx.lineTo( width/2 + x,  height/2 + y - r);
+
+    ctx.arcTo ( width/2 + x,  height/2 + y,  width/2 + x - r,  height/2 + y, r);
+    ctx.lineTo(-width/2 + x + r,  height/2 + y);
+
+    ctx.arcTo (-width/2 + x,  height/2 + y, -width/2 + x,  height/2 + y - r, r);
+    ctx.closePath()
+    ctx.restore();
+
+    return self;
 }
 
 light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){//不包含动画  左上角坐标点  movet s
