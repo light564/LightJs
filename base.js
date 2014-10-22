@@ -1,3 +1,8 @@
+var isIE9 = false;
+if (window.navigator.userAgent.match(/MSIE\s*(\d+)/) !== null && window.navigator.userAgent.match(/MSIE\s*(\d+)/)[1] == 9) {
+	isIE9 = true;
+}
+
 function $(element){
 	if(element[0] == '#')
 		return document.querySelector(element);
@@ -57,7 +62,7 @@ $.ajax = function(setting){
 			error('request time out');
 		}, timeout);
 	} else if (dataType === 'JSONP') {
-		var script = document.createElement("script"),
+		var script = document.createElement('script'),
 		$head = $('head');
 
 		window[jsonpCallback] = function(){
@@ -85,20 +90,17 @@ $.ajax = function(setting){
 //DOM拓展
 
 HTMLElement.prototype.removeSelf = function(){
-	var self = this;
-
-	if (self.removeNode !== undefined) {
-		self.removeNode(true);
+	if (this.removeNode !== undefined) {
+		this.removeNode(true);
 	} else{
-		self.remove();
+		this.remove();
 	}
 
-	return self;
+	return this;
 }
 
 HTMLElement.prototype.find = function(element){
-	var self = this,
-	temp = self.querySelectorAll(element);
+	var temp = this.querySelectorAll(element);
 	if (temp.length === 1 || temp.length === 0) {//undefined
 		return temp[0];
 	}
@@ -107,147 +109,112 @@ HTMLElement.prototype.find = function(element){
 }
 
 HTMLElement.prototype.getStyle = function(css, pseudoElt){
-	var self = this;
 	if(pseudoElt === undefined)
-		return window.getComputedStyle(self)[css]
-	return window.getComputedStyle(self, pseudoElt)[css]
+		return window.getComputedStyle(this)[css]
+	return window.getComputedStyle(this, pseudoElt)[css]
 }
 
 HTMLElement.prototype.removeClass = function(className){
-	var self = this,
-	classList = self.className.split(' '),
+	var classList = this.className.split(' '),
 	listNum = -1;
 	if ( (listNum = classList.indexOf(className)) !== -1 ) {
 		classList.splice(listNum, 1);
 	}
-	self.className = classList.join(' ');
-	return self;
+	this.className = classList.join(' ');
+	return this;
 }
 
 HTMLElement.prototype.addClass = function(className){
-	var self = this,
-	classList = self.className.split(' ');
+	var classList = this.className.split(' ');
 	if (classList.indexOf(className) === -1) {
 		
 		if (classList.length !== 0) {
-			self.className += ' ' + className;	
+			this.className += ' ' + className;	
 		} else{
-			self.className = className;
+			this.className = className;
 		}
 		
 	}
-	return self;
-}
-
-HTMLElement.prototype.bindCssEvent = function(key, fn){
-	var self = this,//TransitionEnd
-	keyTemp = key[0].toUpperCase() + key.slice(1),
-	fnThis = fn.bind(self);
-	if (self[key] === undefined) {
-		self[key] = [];
-	}
-
-	// 已绑定此函数
-	if (self[key].indexOf(fnThis) !== -1) {
-		return self;
-	}
-
-	self.addEventListener(key, fnThis, true);
-	self.addEventListener('webkit' + keyTemp, fnThis, true);
-	self.addEventListener('moz' + keyTemp, fnThis, true);
-	self.addEventListener('o' + keyTemp, fnThis, true);
-	self[key].push(fnThis);
-	return self;
-}
-
-HTMLElement.prototype.unbindCssEvent = function(key, fn){
-	var self = this,
-	length = self[key] ? self[key].length : 0,
-	fnThis = null,
-	keyTemp = key[0].toUpperCase() + key.slice(1),
-	n = -1;
-	
-	if(length === 0)
-		return self;
-	if (fn === undefined) {
-		for(var i = 0; i < length; i++){
-			fnThis = self[key][i];
-			self.removeEventListener(key, fnThis, true);
-			self.removeEventListener('webkit' + keyTemp, fnThis, true);
-			self.removeEventListener('moz' + keyTemp, fnThis, true);
-			self.removeEventListener('o' + keyTemp, fnThis, true);
-		}
-		self[key] = undefined;
-	} else{
-		fnThis = fn.bind(self);
-		n = self[key].indexOf(fnThis);
-
-		if (n === -1) {
-			return self;
-		}
-
-		self.removeEventListener(key, fnThis, true);
-		self.removeEventListener('webkit' + keyTemp, fnThis, true);
-		self.removeEventListener('moz' + keyTemp, fnThis, true);
-		self.removeEventListener('o' + keyTemp, fnThis, true);
-		self[key].splice(n,1);
-	}
-	return self;
-}
-
-HTMLElement.prototype.cssProperty = function(key, value){
-	var self = this;
-
-	self.style[key] = value;
-	key = key[0].toUpperCase() + key.slice(1);
-	self.style['o' + key] = value;
-	self.style['ms' + key] = value;
-	self.style['moz' + key] = value;
-	self.style['webkit' + key] = value;
-
-	return self;
+	return this;
 }
 
 HTMLElement.prototype.bindTransEnd = function(fn){
-	var self = this;
-	return self.bindCssEvent('transitionend', fn);
+	/*if (fn === undefined) {
+		return
+	}*/
+	this.addEventListener('transitionend', fn, true);
+	this.addEventListener('webkitTransitionEnd', fn, true);
+	this.addEventListener('mozTransitionEnd', fn, true);
+	this.addEventListener('oTransitionEnd', fn, true);
+	this.TransitionEnd = fn;
+	return this;
 }
 
-HTMLElement.prototype.unbindTransEnd = function(fn){
-	var self = this;
-	return self.unbindCssEvent('transitionend', fn);
+HTMLElement.prototype.unbindTransEnd = function(){
+	var fn = this.TransitionEnd;
+	if(fn === undefined)
+		return;
+	this.removeEventListener('transitionend', fn, true);
+	this.removeEventListener('webkitTransitionEnd', fn, true);
+	this.removeEventListener('mozTransitionEnd', fn, true);
+	this.removeEventListener('oTransitionEnd', fn, true);
+	this.TransitionEnd = undefined;
+	return this;
 }
 
 HTMLElement.prototype.fadeOut = function(fn){
-	var self = this;
 	//需要增加css3过渡属性
+	var self = this;
+
 	if(self.getStyle('opacity') !== 0.0){
-		self.style.opacity = "0.0";
-		self.unbindTransEnd();
-		self.bindTransEnd(function(){
-			self.unbindTransEnd();
-			self.style.visibility = "hidden";
+		self.style.opacity = '0.0';
+
+		if (isIE9) { // ie9不支持过渡属性
+			self.style.visibility = 'hidden';
+
 			if (fn !== undefined) {
 				fn()
 			}
-		});
+			
+		} else{
+			self.unbindTransEnd();
+			self.bindTransEnd(function(){
+				self.unbindTransEnd();
+				self.style.visibility = 'hidden';
+				
+				if (fn !== undefined) {
+					fn()
+				}
+			});
+		}
 	}
 	return self;
 }
 
 HTMLElement.prototype.fadeIn = function(fn){
-	var self = this;
 	//需要增加css3过渡属性
-	if(self.getStyle("opacity") !== 1.0){
-		self.style.visibility = "visible";
-		self.style.opacity = "1.0";
-		self.unbindTransEnd();
-		self.bindTransEnd(function(){
-			self.unbindTransEnd();
+	var self = this;
+
+	if(self.getStyle('opacity') !== 1.0){
+		self.style.visibility = 'visible';
+
+		if (isIE9) {
+			self.style.opacity = '1.0';
+
 			if (fn !== undefined) {
 				fn()
 			}
-		});
+
+		} else{
+			self.style.opacity = '1.0';
+			self.unbindTransEnd();
+			self.bindTransEnd(function(){
+				self.unbindTransEnd();
+				if (fn !== undefined) {
+					fn()
+				}
+			});
+		}
 	}
 	return self;
 }
@@ -255,14 +222,14 @@ HTMLElement.prototype.fadeIn = function(fn){
 HTMLElement.prototype.getOffset = function(){
 	var self = this;
 	var offset = {
-		"left" : self.offsetLeft + self.clientLeft,
-		"top"  : self.offsetTop + self.clientTop
+		'left' : self.offsetLeft + self.clientLeft,
+		'top'  : self.offsetTop + self.clientTop
 	};
 
-	while(self.offsetParent.nodeName !== "BODY"){
+	while(self.offsetParent.nodeName !== 'BODY'){
 		self = self.offsetParent;
-		offset["left"] += self.offsetLeft + self.clientLeft;
-		offset["top"] += self.offsetTop + self.clientTop;
+		offset['left'] += self.offsetLeft + self.clientLeft;
+		offset['top'] += self.offsetTop + self.clientTop;
 	}
 	return offset;
 }
@@ -272,26 +239,24 @@ HTMLElement.prototype.getOffset = function(){
  *
  */
 HTMLElement.prototype.attr = function(){
-	var self = this;
 	if (arguments.length === 1) {
-		var attrValue = self.getAttribute(arguments[0]);//不存在则为null
+		var attrValue = this.getAttribute(arguments[0]);//不存在则为null
 		if (attrValue === null) {
 			return '';	
 		}
 		return attrValue;
 	} else if (arguments[1] !== null) {
-		self.setAttribute(arguments[0], arguments[1]);
-		return self;
+		this.setAttribute(arguments[0], arguments[1]);
+		return this;
 	} else if (arguments[1] === null) {
-		self.removeAttribute(arguments[0]);
+		this.removeAttribute(arguments[0]);
 	}
 }
 
 NodeList.prototype.forEach = function(fn){
-	var self = this,
-	length = self.length;
+	var length = this.length;
 	for(var i = 0; i < length; i++){
-		fn.call(self[i],self[i],i);
+		fn.call(this[i],this[i],i);
 	}
-	return self;
+	return this;
 }
