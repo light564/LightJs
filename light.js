@@ -301,6 +301,26 @@ window.light = {
         return;
     },
 
+    drawEllipse : function(conf){
+        var self = this,
+        context2D = conf.context2D,
+        x = conf.x || 0,
+        y = conf.y || 0,
+        r = conf.r || 1,
+        color = conf.color || '#FFF',
+        scaleWidth = conf.scaleWidth || 1,
+        scaleHeight = conf.scaleHeight || 1;
+
+        context2D.save();
+        context2D.scale(scaleWidth, scaleHeight);
+        context2D.beginPath();
+        context2D.arc(x, y, r, 0, 2*Math.PI);
+        context2D.closePath();
+        context2D.fillStyle = color;
+        context2D.fill();
+        context2D.restore()
+    },
+
     /*
      * note     绘制图片或根据函数绘制
      * author     Light
@@ -894,24 +914,41 @@ light.sprite.prototype.blink = function(conf){
         var now = new Date().getTime();
         
         self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
-        
-        if(self.opacity > self.blinkBegin){
-            self.opacity = self.blinkBegin;
-            self.blinkFlag = -1 * self.blinkFlag;
-            self.blinkCount -= 0.5;
-        }
 
-        if(self.opacity < self.blinkEnd){
-            self.opacity = self.blinkEnd;
-            self.blinkFlag = -1 * self.blinkFlag;
-            self.blinkCount -= 0.5;
+        if(self.blinkBegin > self.blinkEnd){
+            if (self.opacity > self.blinkBegin) {
+                self.opacity = self.blinkBegin;
+                self.blinkFlag = -1 * self.blinkFlag;
+                self.blinkCount -= 0.5;
+            }
+
+            if(self.opacity < self.blinkEnd){
+                self.opacity = self.blinkEnd;
+                self.blinkFlag = -1 * self.blinkFlag;
+                self.blinkCount -= 0.5;
+            }
+        } else{
+            if(self.opacity > self.blinkEnd){
+                self.opacity = self.blinkEnd;
+                self.blinkFlag = -1 * self.blinkFlag;
+                self.blinkCount -= 0.5;
+            }
+
+            if(self.opacity < self.blinkBegin){
+                self.opacity = self.blinkBegin;
+                self.blinkFlag = -1 * self.blinkFlag;
+                self.blinkCount -= 0.5;
+            }
         }
 
         if (self.blinkCount === 0) {
+            self.blinkStyle = undefined;
             self.blinkCallback.bind(self);
             self.blinkCallback();
         }
     }
+
+    return self;
 }
 
 light.sprite.prototype.resetTime = function(){
@@ -963,7 +1000,7 @@ light.sprite.prototype.resize = function(width, height, time, callback){
         self.changeTime = time;
         return;
     }
-    if((!self.changeTime) && (!self.changeHeight) && (!self.changeWidth)){
+    if((!self.changeTime) || (!self.changeHeight) || (!self.changeWidth)){
         return;
     }
 
@@ -973,6 +1010,9 @@ light.sprite.prototype.resize = function(width, height, time, callback){
     self.height = self.height + (self.changeHeight/self.changeTime*(now - self.old));
 
     if( (Math.abs(self.width - self.oldWidth) > Math.abs(self.changeWidth)) || (Math.abs(self.height - self.oldHeight) > Math.abs(self.changeHeight))){
+        self.width = self.oldWidth + self.changeWidth;
+        self.height = self.oldHeight + self.changeHeight;
+
         self.oldWidth = null;
         self.oldHeight = null;
         self.changeTime = null;
