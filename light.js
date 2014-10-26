@@ -869,7 +869,7 @@ light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -
     }
     var now = new Date().getTime();
     self.opacity = self.opacity + self.fadeFlag*(self.changeOpacity*(now - self.old)/self.fadeTime);
-    if(self.opacity > 1){
+    if(self.opacity >= 1){
         self.opacity = 1;
         self.changeOpacity = self.opacity;
         self.fadeTime = null;
@@ -878,7 +878,7 @@ light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -
             self.fadeCallback();
         return;
     }
-    if(self.opacity < 0){
+    if(self.opacity <= 0){
         self.opacity = 0;
         self.old_opacity = self.opacity;
         self.fadeTime = null;
@@ -916,25 +916,25 @@ light.sprite.prototype.blink = function(conf){
         self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
 
         if(self.blinkBegin > self.blinkEnd){
-            if (self.opacity > self.blinkBegin) {
+            if (self.opacity >= self.blinkBegin) {
                 self.opacity = self.blinkBegin;
                 self.blinkFlag = -1 * self.blinkFlag;
                 self.blinkCount -= 0.5;
             }
 
-            if(self.opacity < self.blinkEnd){
+            if(self.opacity <= self.blinkEnd){
                 self.opacity = self.blinkEnd;
                 self.blinkFlag = -1 * self.blinkFlag;
                 self.blinkCount -= 0.5;
             }
         } else{
-            if(self.opacity > self.blinkEnd){
+            if(self.opacity >= self.blinkEnd){
                 self.opacity = self.blinkEnd;
                 self.blinkFlag = -1 * self.blinkFlag;
                 self.blinkCount -= 0.5;
             }
 
-            if(self.opacity < self.blinkBegin){
+            if(self.opacity <= self.blinkBegin){
                 self.opacity = self.blinkBegin;
                 self.blinkFlag = -1 * self.blinkFlag;
                 self.blinkCount -= 0.5;
