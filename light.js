@@ -21,6 +21,14 @@ window.light = {
         return Object.prototype.toString.call(obj) == '[object String]';
     },
 
+    isNumber : function(obj){
+        return Object.prototype.toString.call(obj) === '[object Number]';
+    },
+
+    isArray : function(obj){
+        return Array.isArray(obj);
+    },
+
     isEmail: function(email){
         if (email.match('@') === null) {
             return false;
@@ -60,6 +68,10 @@ window.light = {
             return obj;
         }
 
+        if (self.isNumber(obj)) {
+            return obj;
+        }
+        
         if (obj.hasOwnProperty(key)) {
             return obj[key];
         }
@@ -71,7 +83,6 @@ window.light = {
         }
 
         return value;
-
     },
 
     /* 
@@ -108,6 +119,7 @@ window.light = {
             }
 
             var tempValue = self.getObjectValue(viewData, keyList[i]);
+            
             if (attrList[i] === '*' || attrList[i] === '' || self.isUndefined(attrList[i])) {
                 templateNode.innerHTML += tempValue;
             } else{
@@ -119,18 +131,33 @@ window.light = {
         templateNode.attr('tmp-attr',null);
 
         if (templateNode.attr('tmp-each') !== '') {
-            
-            childSelector = templateNode.attr('tmp-each-item');
-            var valueList = self.getObjectValue(viewData, templateNode.attr('tmp-each'));
-            var tmpChildNode = templateParent.find('[template='+childSelector+']');
-            valueList.forEach(function(v){
-                childNode = self.renderView(tmpChildNode, v);
-                templateNode.appendChild(childNode);
-            });
+            var eachList = templateNode.attr('tmp-each').split(','),
+            eachItemList = templateNode.attr('tmp-each-item').split(',');
 
+            length = eachList.length;
+            
+            for(var i = 0; i < length; i++){
+                childSelector = eachItemList[i];
+                var valueList = null,
+                tmpChildNode = templateParent.find('[template='+childSelector+']');
+
+                if (eachList[i] === '*') {
+                    valueList = viewData;
+                } else{
+                    valueList = self.getObjectValue(viewData, eachList[i]);
+                }
+
+                if (!light.isArray(valueList)) {
+                    valueList = [valueList];
+                }
+                valueList.forEach(function(v){
+                    childNode = self.renderView(tmpChildNode, v);
+                    templateNode.appendChild(childNode);
+                });
+            }
+            
             templateNode.attr('tmp-each',null);
             templateNode.attr('tmp-each-item',null);
-
         }
         templateNode.attr('template', null);
         templateNode.style.display = 'block';
@@ -840,6 +867,23 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
     var t = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))*1000/self.v;
 
     self.resize(width, height, t, callback);
+}
+
+light.sprite.prototype.setAngleTo = function(target){
+    var self = this;
+
+    if(target.x === self.x){
+        target.y > self.y ? self.angle = Math.PI/2 : self.angle = Math.PI*3/2;
+        return;
+    }
+
+    self.angle = Math.atan((target.y-self.y)/(target.x-self.x));//13正 24负
+
+    if(target.x < self.x){
+        self.angle = self.angle+Math.PI;
+    }
+
+    return self;
 }
 
 light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -1 fadeOut 1 fadeIn
