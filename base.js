@@ -138,28 +138,83 @@ HTMLElement.prototype.addClass = function(className){
 	return this;
 }
 
-HTMLElement.prototype.bindTransEnd = function(fn){
-	/*if (fn === undefined) {
-		return
-	}*/
-	this.addEventListener('transitionend', fn, true);
-	this.addEventListener('webkitTransitionEnd', fn, true);
-	this.addEventListener('mozTransitionEnd', fn, true);
-	this.addEventListener('oTransitionEnd', fn, true);
-	this.TransitionEnd = fn;
-	return this;
+HTMLElement.prototype.bindCssEvent = function(key, fn){
+	var self = this,//TransitionEnd
+	keyTemp = key[0].toUpperCase() + key.slice(1),
+	fnThis = fn.bind(self);
+	if (self[key] === undefined) {
+		self[key] = [];
+	}
+
+	// 已绑定此函数
+	if (self[key].indexOf(fnThis) !== -1) {
+		return self;
+	}
+
+	self.addEventListener(key, fnThis, true);
+	self.addEventListener('webkit' + keyTemp, fnThis, true);
+	self.addEventListener('moz' + keyTemp, fnThis, true);
+	self.addEventListener('o' + keyTemp, fnThis, true);
+	self[key].push(fnThis);
+	return self;
 }
 
-HTMLElement.prototype.unbindTransEnd = function(){
-	var fn = this.TransitionEnd;
-	if(fn === undefined)
-		return;
-	this.removeEventListener('transitionend', fn, true);
-	this.removeEventListener('webkitTransitionEnd', fn, true);
-	this.removeEventListener('mozTransitionEnd', fn, true);
-	this.removeEventListener('oTransitionEnd', fn, true);
-	this.TransitionEnd = undefined;
-	return this;
+HTMLElement.prototype.unbindCssEvent = function(key, fn){
+	var self = this,
+	length = self[key] ? self[key].length : 0,
+	fnThis = null,
+	keyTemp = key[0].toUpperCase() + key.slice(1),
+	n = -1;
+	
+	if(length === 0)
+		return self;
+	if (fn === undefined) {
+		for(var i = 0; i < length; i++){
+			fnThis = self[key][i];
+			self.removeEventListener(key, fnThis, true);
+			self.removeEventListener('webkit' + keyTemp, fnThis, true);
+			self.removeEventListener('moz' + keyTemp, fnThis, true);
+			self.removeEventListener('o' + keyTemp, fnThis, true);
+		}
+		self[key] = undefined;
+	} else{
+		fnThis = fn.bind(self);
+		n = self[key].indexOf(fnThis);
+
+		if (n === -1) {
+			return self;
+		}
+
+		self.removeEventListener(key, fnThis, true);
+		self.removeEventListener('webkit' + keyTemp, fnThis, true);
+		self.removeEventListener('moz' + keyTemp, fnThis, true);
+		self.removeEventListener('o' + keyTemp, fnThis, true);
+		self[key].splice(n,1);
+	}
+	return self;
+}
+
+HTMLElement.prototype.cssProperty = function(key, value){
+	var self = this;
+
+	self.style[key] = value;
+	key = key[0].toUpperCase() + key.slice(1);
+	self.style['o' + key] = value;
+	self.style['ms' + key] = value;
+	self.style['moz' + key] = value;
+	self.style['webkit' + key] = value;
+
+	return self;
+}
+
+HTMLElement.prototype.bindTransEnd = function(fn){
+	var self = this;
+	return self.bindCssEvent('transitionend', fn);
+}
+
+HTMLElement.prototype.unbindTransEnd = function(fn){
+	var self = this;
+	return self.unbindCssEvent('transitionend', fn);
 }
 
 HTMLElement.prototype.fadeOut = function(fn){

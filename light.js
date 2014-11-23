@@ -1234,9 +1234,9 @@ light.sprite.prototype.runAnimation = function(anim){
     }
 }
 
-light.sprite.prototype.run = function(name){
+light.sprite.prototype.run = function(){
     var self = this,
-    animName = name || 'Default',
+    animName = self.curAnimation,
     anim = self.getanimByName(animName);
 
     self.runAnimation(anim);
