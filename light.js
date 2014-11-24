@@ -288,42 +288,27 @@ window.light = {
      */
 
     getPixel : function(imageObj, x, y){
-        var r = 0,
-        g = 0,
-        b = 0,
-        a = 0,
-        d = imageObj.data,
+        var d = imageObj.data,
         w = imageObj.width,
-        h = imageObj.height,
-        i = 4*(w*parseInt(y)+parseInt(x));
-
-        r = d[i];
-        g = d[i + 1];
-        b = d[i + 2];
-        a = d[i + 3];
+        i = 4*(w* ~~y + ~~x);
 
         return {
-            'r' : r,
-            'g' : g,
-            'b' : b,
-            'a' : a
+            'r' : d[i],
+            'g' : d[i + 1],
+            'b' : d[i + 2],
+            'a' : d[i + 3]
         }
     },
 
     setPixel : function(imageObj, x, y, color){
-        var r = color.r,
-        g = color.g,
-        b = color.b,
-        a = color.a,
-        d = imageObj.data,
+        var d = imageObj.data,
         w = imageObj.width,
-        h = imageObj.height,
-        i = 4*(w*parseInt(y)+parseInt(x));
+        i = 4*(w* ~~y + ~~x);
 
-        d[i] = r;
-        d[i + 1] = g;
-        d[i + 2] = b;
-        d[i + 3] = a;
+        d[i] = color.r;
+        d[i + 1] = color.g;
+        d[i + 2] = color.b;
+        d[i + 3] = color.a;
 
         return;
     },
@@ -404,8 +389,8 @@ window.light = {
         angleSum = +element.attr('style').match(/rotate\((\d+)deg\)/)[1],
         offset = element.getOffset(),
         centerPoint = {
-            'x' : parseInt(offset.left + element.clientWidth / 2),
-            'y' : parseInt(offset.top + element.clientHeight / 2)
+            'x' : ~~(offset.left + element.clientWidth / 2),
+            'y' : ~~(offset.top + element.clientHeight / 2)
         },
         key = false;
 
@@ -421,9 +406,9 @@ window.light = {
             var mousePos = mousePosition(ev);
 
             key = true;
-            mousePosOld.x = parseInt(mousePos.x - centerPoint.x);
-            mousePosOld.y = parseInt(mousePos.y - centerPoint.y);
-            mousePosOld.angle = parseInt(self.getAngle(mousePosOld));
+            mousePosOld.x = ~~(mousePos.x - centerPoint.x);
+            mousePosOld.y = ~~(mousePos.y - centerPoint.y);
+            mousePosOld.angle = ~~(self.getAngle(mousePosOld));
         },
         mouseMove = function(ev){
             ev = ev || window.event; 
@@ -432,9 +417,9 @@ window.light = {
             }
             var mousePos = mousePosition(ev),
             gap = 0;
-            mousePos.x = parseInt(mousePos.x - centerPoint.x);
-            mousePos.y = parseInt(mousePos.y - centerPoint.y);
-            mousePos.angle = parseInt(self.getAngle(mousePos));
+            mousePos.x = ~~(mousePos.x - centerPoint.x);
+            mousePos.y = ~~(mousePos.y - centerPoint.y);
+            mousePos.angle = ~~(self.getAngle(mousePos));
             gap = mousePos.angle - mousePosOld.angle;
             if (Math.abs(gap) < 100) {
                 angleSum += mousePos.angle - mousePosOld.angle;
@@ -1074,9 +1059,11 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
     var self = this;
 
     if(self.moveTo_x != null && self.moveTo_y != null){
+        var x = ~~self.x,
+        y = ~~self.y;
         self.reviseAngle();
         if(self.angle >= 0 && self.angle < Math.PI/2){//速度方向在第一象限
-            if(self.moveTo_x <= self.x && self.moveTo_y <= self.y+1e-13){
+            if(self.moveTo_x <= x && self.moveTo_y <= y){
                 self.x = self.moveTo_x;
                 self.y = self.moveTo_y;
 
@@ -1084,10 +1071,11 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
                 self.moveTo_y = null;
                 self.v = 0;
                 self.angle = 0;
+                return;
             }
         }
         if(self.angle >= Math.PI/2 && self.angle < Math.PI){//速度方向在第二象限
-            if(self.moveTo_x >= self.x && self.moveTo_y <= self.y+1e-13){
+            if(self.moveTo_x >= x && self.moveTo_y <= y){
                 self.x = self.moveTo_x;
                 self.y = self.moveTo_y;
 
@@ -1095,10 +1083,11 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
                 self.moveTo_y = null;
                 self.v = 0;
                 self.angle = 0;
+                return;
             }
         }
         if(self.angle >= Math.PI && self.angle < Math.PI*3/2){//速度方向在第三象限
-            if(self.moveTo_x >= self.x && self.moveTo_y+1e-13 >= self.y){
+            if(self.moveTo_x >= x && self.moveTo_y >= y){
                 self.x = self.moveTo_x;
                 self.y = self.moveTo_y;
 
@@ -1106,10 +1095,11 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
                 self.moveTo_y = null;
                 self.v = 0;
                 self.angle = 0;
+                return;
             }
         }
         if(self.angle >= Math.PI*3/2 && self.angle < Math.PI*2){//速度方向在第四象限
-            if(self.moveTo_x <= self.x && self.moveTo_y+1e-13 >= self.y){
+            if(self.moveTo_x <= x && self.moveTo_y >= y){
                 self.x = self.moveTo_x;
                 self.y = self.moveTo_y;
 
@@ -1117,6 +1107,7 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
                 self.moveTo_y = null;
                 self.v = 0;
                 self.angle = 0;
+                return;
             }
         }
     }
