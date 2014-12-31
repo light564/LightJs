@@ -1,5 +1,10 @@
 window.light = {
-
+    // 是否摧毁时钟
+    stDestoryClock : false,
+    // 是否摧毁模型
+    stDestoryModel : false,
+    // 时间控制
+    stNowTime : null,
     // new后的Model push到后面，统一调度
     modelStack : [],
     // new后的clock
@@ -8,6 +13,13 @@ window.light = {
     layer : [],
     // sprite 数组，new之后全部保存在此处
     spriteList : [],
+
+    // 缓存正弦、余弦值
+    sinArray : [],
+    cosArray : [],
+
+    // 暂停控制
+    pauseSprite : false,
                 
     isObject : function(obj){
         return obj === Object(obj);
@@ -172,17 +184,79 @@ window.light = {
     //--------------------------------------------//
     //                  数学区域                  //
     //--------------------------------------------//
+    // 初始化三角函数
+    initSC : function(){
+        var self = this;
+
+        for(var i = 0; i < 360; i++){
+            var r = i*Math.PI/180;
+            self.sinArray.push(Math.sin(r));
+            self.cosArray.push(Math.cos(r));
+        }
+    },
+
+    sin : function(angle){
+        var self = this,
+        n = 0;
+
+        angle = ~~angle;
+
+        n = ~~(angle/360);
+
+        if (angle < 0) {
+            angle += 360 * (1 - n);
+        } else{
+            angle -= 360 * n;
+        }
+
+        if (angle === 360) {
+            angle = 0;
+        }
+
+        return self.sinArray[angle];
+    },
+
+    cos : function(angle){
+        var self = this,
+        n = 0;
+
+        angle = ~~angle;
+
+        n = ~~(angle/360);
+
+        if (angle < 0) {
+            angle += 360 * (1 - n);
+        } else{
+            angle -= 360 * n;
+        }
+
+        if (angle === 360) {
+            angle = 0;
+        }
+
+        return self.cosArray[~~angle];
+    },
     // 取范围内随机数
     randomRange : function(begin, end){
         return Math.random()*(end - begin) + begin;
+    },
+    // 亮点之间的距离
+    distance : function(p1, p2){
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2)+Math.pow(p1.y - p2.y, 2));
     },
     /*
      * note     获取向量与x+方向的夹角
      * author     Light
      * parameter p 点
      */
-    getAngle : function(p){
-        var angle = null;
+    getAngle : function(p, center){
+        var angle = null,
+        center = center ? center : {x:0, y:0},
+        p = {
+            x : p.x - center.x,
+            y : p.y - center.y
+        };
+
         if (p.x === 0) {
             if (p.y >= 0) {
                 return 180/2;
@@ -191,7 +265,7 @@ window.light = {
             }
         }
         // 1象限
-        angle = Math.atan(p.y/p.x) / Math.PI * 180;
+        angle = Math.atan(p.y/p.x) * 180 / Math.PI;
         // 2象限
         if (p.x < 0 && p.y > 0) {
             angle = angle + 180;
@@ -300,6 +374,21 @@ window.light = {
         }
     },
 
+    /*
+     * note     获取canvas中 某像素点的值
+     * author    Light
+     */
+    getImgPixel : function(ctx, x, y){
+        var d = ctx.getImageData(~~x, ~~y, 1, 1).data;
+
+        return {
+            'r' : d[0],
+            'g' : d[1],
+            'b' : d[2],
+            'a' : d[3]
+        }
+    },
+
     setPixel : function(imageObj, x, y, color){
         var d = imageObj.data,
         w = imageObj.width,
@@ -311,6 +400,32 @@ window.light = {
         d[i + 3] = color.a;
 
         return;
+    },
+
+    // 简谐运动
+    setTriPath : function(conf){
+        var sprite = conf.sprite,
+        kd = conf.kd || 0.1,
+        kw = conf.kw || 2,
+        direction = conf.direction || 'y';
+
+        kw = kw/Math.PI*180;
+        kd *= 0.05*rem;
+
+        sprite.customPath = function(){
+            var self = this,
+            that = light,
+            now = that.stNowTime,//ms  当前时间
+            gapTime = (now - self.old)/1000;
+
+            if (!self.triAngle) {
+                self.triAngle = 0;
+            }
+
+            self.triAngle += gapTime*kw;
+
+            self[direction] += light.sin(self.triAngle)*kd;
+        }
     },
 
     drawEllipse : function(conf){
@@ -343,6 +458,7 @@ window.light = {
         _img = conf.img,
         x = conf.x,
         y = conf.y,
+        scaleX = conf.scaleX,
         img_width = conf.imgWidth || _img.width,
         img_height = conf.imgHeight || _img.height,
         rotate = conf.rotate || 0,
@@ -354,20 +470,26 @@ window.light = {
         if(!context2D){
             return;
         }
-        
-        context2D.translate(center_x, center_y);
-        context2D.rotate(rotate);
-        context2D.globalAlpha = opacity;
 
+        context2D.save();
+        context2D.translate(center_x, center_y);
+        if (scaleX) {
+            context2D.scale(-1, 1);
+        }
+
+        if (rotate) {
+            context2D.rotate(rotate);
+        }
+        if (opacity !== 1) {
+            context2D.globalAlpha = opacity;
+        }
+        
         if (typeImg === 'function') {
             _img();
         } else{
             context2D.drawImage(_img, x - center_x, y - center_y, img_width, img_height);
         }
-
-        context2D.rotate(-rotate);
-        context2D.translate(-center_x, -center_y);
-        context2D.globalAlpha = 1;
+        context2D.restore();
     },
 
     //--------------------------------------------//
@@ -465,11 +587,15 @@ window.light = {
         self.gap = conf.gap || 1000;//计时器间隔时间 单位ms
         self.loop = conf.loop || -1//-1为无限次循环   循环次数
         self.destory = conf.destory || false;//次数用尽后自毁
-        self.start = new Date().getTime();//计时器开始时间 ms
+        self.start = Date.now();//计时器开始时间 ms
+        if (!light.isUndefined(conf.noPause)) {
+            self.noPause = conf.noPause;
+        }else{
+            self.noPause = true;
+        }
 
         light.clockStack.push(self);
 
-        return self;
     },
 
     /*  
@@ -487,10 +613,10 @@ window.light = {
         self.group = conf.group || [0]; // 处于第几个页面显示,0为都显示
         self.name = conf.name || 'sprite';
         self.src  = conf.src || '';
-        self.x = conf.x || 0;
-        self.y = conf.y || 0;
-        self.width = conf.width || 0;
-        self.height = conf.height || 0;
+        self.x = ~~conf.x || 0;
+        self.y = ~~conf.y || 0;
+        self.width = ~~conf.width || 0;
+        self.height = ~~conf.height || 0;
         self.rotate = conf.rotate || 0;
         self.opacity = conf.opacity===undefined ? 1 : conf.opacity;//透明度
         self.changeOpacity = conf.changeOpacity || null;
@@ -499,6 +625,12 @@ window.light = {
         /*元素动作*/
         self.v = conf.v || 0;//移动速度  s
         self.angle = conf.angle || 0;//移动方向  s
+        self.vx = self.v * that.cos(self.angle);// y方向速度
+        self.vy = self.v * that.sin(self.angle);// x方向速度
+        self.lockVx = conf.lockVx || false;
+        self.lockVy = conf.lockVy || false;
+        self.ax = conf.ax || 0;
+        self.ay = conf.ay || 0;
         self.w = conf.w || 0;//旋转角速度  s
 
         /*元素范围限定*/
@@ -533,10 +665,17 @@ window.light = {
         self.rotateCenterX = conf.rotateCenterX || null;
         self.rotateCenterY = conf.rotateCenterY || null;
 
+        /*水平翻转*/
+        self.scaleX = conf.scaleX || false;
+        /*停止计算*/
+        self.noLayer = false;
+        /*拒绝执行light的暂停*/
+        self.noPause = conf.noPause;
+
         self.animations = [];
-        self.curAnimation = 'Default';//当前播放的用户名
+        self.curAnimation = 'Default';//当前播放的动画名
         self.curFrame = 0;//当前显示的图片序号
-        self.frameStart = new Date().getTime();//一帧动画开始的时间（结束后刷新）
+        self.frameStart = Date.now();//一帧动画开始的时间（结束后刷新）
         self.old = self.frameStart;//移动前的时间
 
         self.destoryOutside = false;
@@ -652,12 +791,16 @@ window.light = {
     //--------------------------------------------//
 
     destoryIterm : function(stackList){
-        //生成了新的数组  与原来的地址不一样～
-        stackList = stackList.filter(function(element){
-            return !element.destory;//返回destory为false的元素
-        });
+        var stackListTemp = [],
+        length = stackList.length;
 
-        return stackList
+        for(var i = 0; i < length; i++){
+            if (!stackList[i].destory) {
+                stackListTemp.push(stackList[i]);
+            }
+        }
+
+        return stackListTemp
     },
 
     destoryItermInArr : function(){
@@ -720,14 +863,22 @@ window.light = {
         modelLength = null,
         clockLength = null;
 
-        self.modelStack = self.destoryIterm(self.modelStack);
+        self.stNowTime = Date.now();
+
+        if (self.stDestoryModel) {
+            self.stDestoryModel = false;
+            self.modelStack = self.destoryIterm(self.modelStack);
+        }
         modelLength = self.modelStack.length;
 
         for(var i = 0; i < modelLength; i++){
             self.modelStack[i].run();
         }
 
-        self.clockStack = self.destoryIterm(self.clockStack);
+        if (self.stDestoryClock) {
+            self.stDestoryClock = false;
+            self.clockStack = self.destoryIterm(self.clockStack);
+        }
         clockLength = self.clockStack.length;
 
         for(var i = 0; i < clockLength; i++){
@@ -737,6 +888,8 @@ window.light = {
         requestAnimFrame(self.run);
     }
 }
+
+light.initSC();
 
 // 将元素粘贴到图层数组与精灵数组中
 // 此处拓展了所有数组元素，稍后修改
@@ -785,11 +938,12 @@ light.sprite.prototype.draw = function(_img, x, y, img_width, img_height, rotate
         'y' : y,
         'imgWidth' : img_width,
         'imgHeight' : img_height,
-        'rotate' : rotate,
+        'rotate' : rotate/180*Math.PI,
         'opacity' : opacity,
         'center_x' : self.rotateCenterX,
-        'center_y' : self.rotateCenterY
-    });    
+        'center_y' : self.rotateCenterY,
+        'scaleX' : self.scaleX
+    });
 }
 
 // 绘制圆角矩形
@@ -838,19 +992,20 @@ light.sprite.prototype.moveTo = function(x, y, width, height, callback, movet){/
         self.v = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))*1000/movet;
     }
     if(x == self.x){
-        y > self.y ? self.angle = Math.PI/2 : self.angle = Math.PI*3/2;
+        y > self.y ? self.angle = 90 : self.angle = 270;
         var t = (y-self.y)/self.v;
         self.resize(width, height,t,callback);
         return;
     }
 
-    self.angle = Math.atan((y-self.y)/(x-self.x));//13正 24负
+    self.angle = ~~(Math.atan((y-self.y)/(x-self.x))*180/Math.PI);//13正 24负
 
     if(x < self.x){
-        self.angle = self.angle+Math.PI;
+        self.angle = self.angle+180;
     }
     var t = Math.sqrt((y-self.y)*(y-self.y)+(x-self.x)*(x-self.x))*1000/self.v;
 
+    self.setAngle(self.angle);
     self.resize(width, height, t, callback);
 }
 
@@ -858,21 +1013,36 @@ light.sprite.prototype.setAngleTo = function(target){
     var self = this;
 
     if(target.x === self.x){
-        target.y > self.y ? self.angle = Math.PI/2 : self.angle = Math.PI*3/2;
+        target.y > self.y ? self.angle = 90 : self.angle = 270;
         return;
     }
 
-    self.angle = Math.atan((target.y-self.y)/(target.x-self.x));//13正 24负
+    self.angle = ~~(Math.atan((target.y-self.y)/(target.x-self.x))*180/Math.PI);//13正 24负
 
     if(target.x < self.x){
-        self.angle = self.angle+Math.PI;
+        self.angle = self.angle+180;
     }
+
+    self.setAngle(self.angle);
+
+    return self;
+}
+
+light.sprite.prototype.setAngle = function(angle){
+    var self = this,
+    that = light;
+
+    self.angle = angle;
+    self.v  = Math.sqrt(Math.pow(self.vx, 2) + Math.pow(self.vy, 2));
+    self.vx = self.v * that.cos(angle);
+    self.vy = self.v * that.sin(angle);
 
     return self;
 }
 
 light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -1 fadeOut 1 fadeIn
-    var self = this;
+    var self = this,
+    that = light;
 
     if(callback){
         self.fadeCallback = callback.bind(self);
@@ -896,7 +1066,8 @@ light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -
         if(self.fadeFlag == 1)
             self.changeOpacity = Math.abs(self.opacity - 1);
     }
-    var now = new Date().getTime();
+    
+    var now = that.stNowTime;
     self.opacity = self.opacity + self.fadeFlag*(self.changeOpacity*(now - self.old)/self.fadeTime);
     if(self.opacity >= 1){
         self.opacity = 1;
@@ -905,6 +1076,7 @@ light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -
         self.fadeFlag = null;
         if(self.fadeCallback)
             self.fadeCallback();
+        self.fadeCallback = null;
         return;
     }
     if(self.opacity <= 0){
@@ -925,7 +1097,8 @@ light.sprite.prototype.fade = function(time, flag, callback){   //time ms flag -
  */
 
 light.sprite.prototype.blink = function(conf){
-    var self = this;
+    var self = this,
+    that = light;
 
     if (conf) {
         self.blinkStyle = conf.style || 'all'; // 闪烁属性，暂时只支持透明度
@@ -940,7 +1113,7 @@ light.sprite.prototype.blink = function(conf){
     if (self.blinkStyle === 'opacity' || self.blinkStyle === 'all') {
         var changeOpacity = Math.abs(self.blinkBegin - self.blinkEnd);
 
-        var now = new Date().getTime();
+        var now = that.stNowTime;
         
         self.opacity = self.opacity + self.blinkFlag*(changeOpacity*(now - self.old)/self.blinkSpeed);
 
@@ -983,7 +1156,7 @@ light.sprite.prototype.blink = function(conf){
 light.sprite.prototype.resetTime = function(){
     var self = this;
 
-    self.old = new Date().getTime();
+    self.old = Date.now();
 }
 
 light.sprite.prototype.click = function(){//点击后发生的事件
@@ -993,7 +1166,7 @@ light.sprite.prototype.click = function(){//点击后发生的事件
 light.sprite.prototype.isOnSprite = function(x, y){
     var self = this;
 
-    if(x > self.x && x < self.x+self.width && y > self.y && y < self.y+self.height){
+    if(x >= self.x && x <= self.x+self.width && y >= self.y && y <= self.y+self.height){
         return true;
     }
     return false
@@ -1002,17 +1175,18 @@ light.sprite.prototype.isOnSprite = function(x, y){
 light.sprite.prototype.reviseAngle = function(){//将速度角度限定为0-360度
     var self = this;
 
-    for(var i = 1; self.angle >= Math.PI*2; i++){
-        self.angle = self.angle - Math.PI*2*i;
-        
+    for(var i = 1; self.angle >= 360; i++){
+        self.angle = self.angle - 360;
     }
+
     for(var i = 1; self.angle < 0; i++){
-        self.angle = self.angle + Math.PI*2*i;
+        self.angle = self.angle + 360;
     }
 }
 
 light.sprite.prototype.resize = function(width, height, time, callback){
-    var self = this;
+    var self = this,
+    that = light;
 
     if(callback){
         self.changeSizeCallback = callback;
@@ -1033,7 +1207,7 @@ light.sprite.prototype.resize = function(width, height, time, callback){
         return;
     }
 
-    var now = new Date().getTime();
+    var now = that.stNowTime;
 
     self.width = self.width + (self.changeWidth/self.changeTime*(now - self.old));
     self.height = self.height + (self.changeHeight/self.changeTime*(now - self.old));
@@ -1116,14 +1290,16 @@ light.sprite.prototype.isDestination = function(){//判断是否到达目的地 
 light.sprite.prototype.isRotateToAngle = function(){//旋转角度限定
     var self = this;
 
-    if(self.rotateAngle != null){
+    if(self.rotateAngle !== null){
         if(self.w > 0){
             if(self.rotate >= self.rotateAngle){
                 self.rotate = self.rotateAngle;
                 self.w = 0;
 
-                if (self.rotateAngleCallBack)
+                if (self.rotateAngleCallBack){
+                    self.rotateAngle = null;
                     self.rotateAngleCallBack.call(self);
+                }
             }
         }
         if(self.w < 0){
@@ -1131,11 +1307,52 @@ light.sprite.prototype.isRotateToAngle = function(){//旋转角度限定
                 self.rotate = self.rotateAngle;
                 self.w = 0;
                 
-                if (self.rotateAngleCallBack)
+                if (self.rotateAngleCallBack){
+                    self.rotateAngle = null;
                     self.rotateAngleCallBack.call(self);
+                }
             }
         }
     }
+}
+
+light.sprite.prototype.rotateToAngle = function(angle, w){
+    var self = this,
+    w = w || 500;
+
+    self.rotate = self.rotate % 360;
+    if (self.rotate < 0) {
+        self.rotate += 360;
+    }
+
+    angle = angle % 360;
+    if (angle < 0) {
+        angle += 360;
+    }
+
+    var gap = angle - self.rotate;
+
+    if (gap > -180 && gap < 0) {
+        w = -w;
+    }else if (gap > 180) {
+        self.rotate += 360;
+        w = -w;
+    } else if (gap < -180) {
+        angle += 360;
+    }
+
+    self.rotateAngle = angle;
+    self.w = w;
+}
+
+light.sprite.prototype.changeAnim = function(name){
+    var self = this,
+    that = light,
+    name = name || 'Default';
+
+    self.curAnimation = name;
+    self.curFrame = 0;
+    self.frameStart = that.stNowTime;
 }
 
 light.sprite.prototype.createAnim = function(anim){
@@ -1145,7 +1362,9 @@ light.sprite.prototype.createAnim = function(anim){
     inputType = typeof(anim.frames[0]);
 
     animobj.name = anim.name || 'Default';
-    animobj.speed = anim.speed || 10;//动画播放速度  s
+    animobj.speed = +anim.speed || 100;//动画播放速度  ms
+    animobj.loop = anim.loop || -1; // 循环次数 -1为无限次
+    animobj.callback = anim.callback;
     animobj.frames = [];
 
     for(var i = 0; i < length; i++){
@@ -1183,11 +1402,11 @@ light.sprite.prototype.createAnim = function(anim){
 
 light.sprite.prototype.getanimByName = function(name){
     var self = this,
-    anims = self.animations;
+    anims = self.animations,
     length = anims.length;
 
     for(var i = 0; i < length; i++){
-        if(anims[i].name == name){
+        if(anims[i].name === name){
             return anims[i];
         }
     }
@@ -1196,40 +1415,70 @@ light.sprite.prototype.getanimByName = function(name){
 
 light.sprite.prototype.runAnimation = function(anim){
     var self = this,
-    animobj = anim,
-    cur_frame_gap = 1000.0/animobj.speed,//s
-    now = new Date().getTime(),//ms  当前时间
-    typeFrame = typeof(animobj.frames[self.curFrame]);
+    that = light,
+    now = that.stNowTime,//ms  当前时间
+    typeFrame = typeof(anim.frames[self.curFrame]),
+    gap = (now - self.old)/1000;
+
+    if (that.pauseSprite && !self.noPause) {
+        self.old = now;
+        if (typeFrame === 'function') {
+            self.draw(anim.frames[self.curFrame].bind(self));
+        } else{
+            self.draw(anim.frames[self.curFrame]);//绘制
+        }
+        return;
+    }
+
+    if (self.customPath) {
+        self.customPath();
+    }
+    self.vx += self.ax*gap;
+    self.vy += self.ay*gap;
     
-    self.x = self.x + self.v*(now - self.old)*Math.cos(self.angle)/1000.0;
-    self.y = self.y + self.v*(now - self.old)*Math.sin(self.angle)/1000.0;
+    if (!self.lockVx) {
+        self.x += self.vx*gap;
+    }
+    if (!self.lockVy) {
+        self.y += self.vy*gap;
+    }
+
     self.isDestination();
     self.isRotateToAngle();
     self.fade();
     self.blink();
     self.resize();
-    self.rotate = self.rotate + self.w*(now - self.old)/1000;
+    self.rotate += self.w*gap;
     if (typeFrame === 'function') {
-        self.draw(animobj.frames[self.curFrame].bind(self));
+        self.draw(anim.frames[self.curFrame].bind(self));
     } else{
-        self.draw(animobj.frames[self.curFrame]);//绘制
+        self.draw(anim.frames[self.curFrame]);//绘制
     }
     self.old = now;
 
-    if(now >= self.frameStart + cur_frame_gap){
-        self.frameStart = new Date().getTime();
+    if(now >= self.frameStart + anim.speed){
+        self.frameStart = now;
         self.curFrame++;
-        if(self.curFrame >= animobj.frames.length){
+
+        if(self.curFrame >= anim.frames.length){
             self.curFrame = 0;
+            if (anim.callback) {
+                anim.callback.call(self);
+            }
         }
     }
 }
 
 light.sprite.prototype.run = function(){
     var self = this,
-    animName = self.curAnimation,
-    anim = self.getanimByName(animName);
+    anim = null;
 
+    if (self.noLayer) {
+        self.old = light.stNowTime;
+        return;
+    }
+
+    anim = self.getanimByName(self.curAnimation);
     self.runAnimation(anim);
 }
 
@@ -1600,16 +1849,23 @@ light.clock.prototype.doSomething = function(){
 }
 
 light.clock.prototype.run = function(){
-    var self = this;
-    if(self.loop === 0){
-        self.destory = true;
+    var self = this,
+    that = light;
+
+    if (!self.noPause && that.pauseSprite) {
+        self.start = that.stNowTime;
         return;
     }
 
-    var now = new Date().getTime();
-    if(now - self.start >= self.gap){
+    if(self.loop === 0){
+        self.destory = true;
+        that.stDestoryClock = true;
+        return;
+    }
+
+    if(that.stNowTime - self.start >= self.gap){
         self.loop--;
-        self.start = now;
+        self.start = that.stNowTime;
         self.doSomething();
     }
 }
