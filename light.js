@@ -42,14 +42,21 @@ window.light = {
     },
 
     isEmail: function(email){
-        if (email.match('@') === null) {
+        if (email.match(/[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}/) === null) {
             return false;
         }
         return true;
     },
 
     isMobilePhone: function(phone){
-        if (phone.match(/(?:\(?[0\+]?\d{1,3}\)?)[\s-]?(?:0|\d{1,4})[\s-]?(?:(?:13\d{9})|(?:\d{7,8}))/) === null) {
+        if (phone.match(/^1(3|5|7|8|4)\d{9}$/) === null) {
+            return false;
+        }
+        return true;
+    },
+
+    isQQNumber : function(qqNumber){
+        if (qqNumber.match(/([1-9][0-9]{4})|([0-9]{6,10})/) === null) {
             return false;
         }
         return true;
