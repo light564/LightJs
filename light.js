@@ -614,7 +614,8 @@ window.light = {
         if (!(this instanceof light.sprite)){//强制使用new
             return new light.sprite(conf);
         }
-        var self = this;
+        var self = this,
+        that = light;
 
         self.context2D = conf.context2D;
         self.group = conf.group || [0]; // 处于第几个页面显示,0为都显示
